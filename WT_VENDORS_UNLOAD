@@ -1,0 +1,22 @@
+unload(
+'
+select 
+''WT'' as source_system,
+vendorid as vendor_id,
+vendorname as name,
+vendoraddress1 as addr1,
+vendoraddress2 as addr2,
+vendorcity  as city,
+fk_vendorstate  as state,
+fk_vendorcountry  as country,
+vendorzip as zip,
+translate(regexp_replace(vendorphone, ''\r|\n'', ''''),''|'','''')   as phone,
+convert_timezone(''CDT'',sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+FROM
+dbc.tbl_vendors v
+')
+TO 's3://dw-datapipeline-prod/Data/wt_vendors_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

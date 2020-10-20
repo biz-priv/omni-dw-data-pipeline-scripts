@@ -1,0 +1,5 @@
+truncate table datamart.int_company_invoice;
+
+COPY datamart.int_company_invoice FROM 's3://dw-datapipeline-prod/Data/ee_int_company_invoice_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+COPY datamart.int_company_invoice FROM 's3://dw-datapipeline-prod/Data/wt_int_company_invoice_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';

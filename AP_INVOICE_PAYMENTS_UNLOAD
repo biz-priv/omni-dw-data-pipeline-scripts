@@ -1,0 +1,44 @@
+UNLOAD(
+'
+SELECT 
+A.source_system,
+A.file_nbr,
+A.invoice_nbr,
+A.vendor_id,
+A.service_id,
+A.vendor_invoice_nbr,
+CASE WHEN A.source_system = ''EE'' THEN B.invoice_seq_nbr ELSE A.invoice_seq_nbr END AS invoice_seq_nbr,
+A.revenue_stn,
+A.controlling_stn,
+A.bill_to_nbr,
+A.cntrl_cust_nbr,
+A.consol_nbr,
+A.charge_cd,
+A.invoice_date,
+A.finalized_date,
+A.vendor_complete_date,
+A.finalized_by,
+A.updated_by,
+A.approved_rejected_date,
+A.approved_rejected_by,
+A.disposition,
+A.disposition_reason,
+A.top_line_cost,
+A.accessorial,
+A.tax,
+A.estimated_total,
+A.finalized_total,
+A.total,
+convert_timezone(''CDT'',sysdate) AS LOAD_CREATE_DATE,
+convert_timezone(''CDT'',sysdate) AS LOAD_UPADTE_DATE
+FROM ap_invoice_payments_stage A
+LEFT OUTER JOIN
+ee_seq B
+ON A.source_system = B.source_system
+AND A.file_nbr = B.file_nbr
+AND A.invoice_nbr = B.invoice_nbr
+')
+TO 's3://dw-datapipeline-prod/Data/Invoices/ap_invoice_payments_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint' 
+Parallel off
+ALLOWOVERWRITE

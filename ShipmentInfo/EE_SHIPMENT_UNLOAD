@@ -1,0 +1,1301 @@
+unload
+(
+$$
+SELECT 
+distinct
+'EE' AS SOURCE_SYSTEM,
+MAIN.ORIGFILENO AS FILE_NBR,
+MAIN.LEDATE,
+MAIN.ORIGIN AS HANDLING_STN,
+invoicedetails.controlling_Stn,
+invoicedetails.revenue_Stn,
+invoicedetails.invoice_Date AS REV_RECOGNITION_DATE,
+'' AS MASTER_BILL_NBR,
+'' AS HOUSE_BILL_NBR,
+'' AS PICKUP_ZONE,
+'' AS ORIGIN_PORT_IATA,
+'' AS DEST_PORT_IATA,
+'' AS TRADE_LANE,
+'' AS DELIVERY_ZONE,
+'' AS SHIPPER_NAME,
+'' AS SHIPPER_ADDR_1,
+'' AS SHIPPER_ADDR_2,
+'' AS SHIPPER_CITY,
+'' AS SHIPPER_ST,
+'' AS SHIPPER_CNTRY,
+'' AS SHIPPER_ZIP,
+'' AS CONSIGNEE_NAME ,
+'' AS CONSIGNEE_ADDR_1,
+'' AS CONSIGNEE_ADDR_2,
+'' AS CONSIGNEE_CITY,
+'' AS CONSIGNEE_ST,
+'' AS CONSIGNEE_CNTRY,
+'' AS CONSIGNEE_ZIP,
+regexp_replace(TRANSLATE(MAIN.DESCR,'|',''), '\r|\n', '') AS DESCRIPTION,
+0 AS PIECES,
+0 AS ACTUAL_WGHT_LBS,
+0 AS ACTUAL_WGHT_KGS,
+0 AS CHRG_WGHT_LBS,
+0 AS CHRG_WGHT_KGS,
+0 AS CUBIC_FEET,
+0 AS CUBIC_METERS,
+invoicedetails.invoice_Date AS PICKUP_DATE,
+invoicedetails.invoice_Date AS POD_DATE,
+cast(null as timestamp) as ETA_DATE,
+cast(null as timestamp) as ETD_DATE,
+cast(null as timestamp) as schd_delv_DATE,
+'' AS SERVICE_LVL,
+case main.prefix
+when '01' then 'Freight'
+when '02' then 'Freight'
+when '03' then 'Freight'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Freight'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Warehouse/VAS'
+when '08' then 'Freight'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Freight'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Internal'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Internal'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Warehouse/VAS'
+when '34' then 'Warehouse/VAS'
+when '36' then 'Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then 'Freight'
+when '42' then 'Freight'
+when '43' then 'Freight'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Freight'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' 
+end as shipment_activity,
+case when invoicedetails.controlling_Stn = 'AUS' and main.prefix = '05' then 'Small Pack' else case main.prefix
+when '01' then 'International'
+when '02' then 'International'
+when '03' then 'International'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Domestic'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Warehouse/VAS'
+when '08' then 'Domestic'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Small Pack'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Internal'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Internal'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Warehouse/VAS'
+when '34' then 'Warehouse/VAS'
+when '36' then 'Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then 'International'
+when '42' then 'International'
+when '43' then 'Small Pack'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Domestic'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' end
+end as shipment_type,
+case when invoicedetails.controlling_Stn = 'AUS' and main.prefix = '05' then 'Small Pack' else 
+(case when  main.prefix in ('01','02','03','05','08','41','42','46') then 'Standard'
+when main.prefix = '04' then 'Warehouse/VAS'
+when main.prefix = '06' then 'Warehouse/VAS'
+when main.prefix = '07' then 'Offshore Warehouse/VAS'
+when main.prefix = '09' then 'Warehouse/VAS'
+when main.prefix = '10' then 'Small Pack'
+when main.prefix = '11' then 'Warehouse/VAS'
+when main.prefix = '15' then 'Finance'
+when main.prefix = '18' then 'Warehouse/VAS'
+when main.prefix = '19' then 'Finance'
+when main.prefix = '20' then 'Warehouse/VAS'
+when main.prefix = '21' then 'Warehouse/VAS'
+when main.prefix = '23' then 'Warehouse/VAS'
+when main.prefix = '31' then 'Offshore Warehouse/VAS'
+when main.prefix = '34' then 'Offshore Warehouse/VAS'
+when main.prefix = '36' then 'Offshore Warehouse/VAS'
+when main.prefix = '37' then 'Warehouse/VAS'
+when main.prefix = '38' then 'Warehouse/VAS'
+when main.prefix = '39' then 'Offshore Warehouse/VAS'
+when main.prefix = '40' then 'SG GST (WH/VAS)'
+when main.prefix = '43' then 'Freight'
+when main.prefix = '44' then 'Warehouse/VAS'
+when main.prefix = '45' then 'Warehouse/VAS'
+when main.prefix = '48' then 'Warehouse/VAS'
+when main.prefix = '53' then 'Warehouse/VAS'
+else '' end)
+end as shipment_service,
+case 
+when main.prefix = '03'and main.type = 'S' then 'Ocean' 
+when (invoicedetails.controlling_Stn = 'AUS' and main.prefix = '05') then 'Small Pack' 
+else 
+(case main.prefix
+when '01' then 'Air'
+when '02' then 'Air'
+when '03' then 'Air'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Ground'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Warehouse/VAS'
+when '08' then 'Domestic'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Small Pack'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Internal'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Internal'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Warehouse/VAS'
+when '34' then 'Warehouse/VAS'
+when '36' then 'Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then 'Ocean'
+when '42' then 'Export'
+when '43' then 'Small Pack'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Ground'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' end)
+end as shipment_mode,
+
+case when (invoicedetails.controlling_Stn = 'AUS' and main.prefix = '05') then 'Small Pack' 
+when main.prefix ='03' and main.type = 'S' then decode(main.rc,'F','FCL','L','LCL',main.rc)
+else 
+case main.prefix
+when '01' then 'Air freight'
+when '02' then 'Air freight'
+when '03' then 'Air freight'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Local Pickup and Delivery'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Warehouse/VAS'
+when '08' then 'Domestic'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Small Pack'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Internal'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Internal'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Warehouse/VAS'
+when '34' then 'Warehouse/VAS'
+when '36' then 'Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then decode(main.rc,'F','FCL','L','LCL',main.rc)
+when '42' then decode(main.rc,'F','FCL','L','LCL',main.rc)
+when '43' then 'Small Pack'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Local Pickup and Delivery'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' end
+end as shipment_mode_detl,
+
+case when invoicedetails.controlling_Stn = 'AUS' and main.prefix = '05' then 'Small Pack' else case main.prefix
+when '01' then 'Air Import'
+when '02' then 'Air Export'
+when '03' then '3rd Country'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Local Delivery'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Offshore Warehouse/VAS'
+when '08' then 'Domestic'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Small Pack'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Finance'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Finance'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Offshore Warehouse/VAS'
+when '34' then 'Offshore Warehouse/VAS'
+when '36' then 'Offshore Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Offshore Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then 'Ocean Import'
+when '42' then 'Ocean Export'
+when '43' then 'Freight'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Freight'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' end
+end AS MODEID,
+
+MAIN.CURRENT_STATUS AS CURRNET_STATUS,
+invoicedetails.invoice_nbr,
+invoicedetails.invoice_Date,
+trim(invoicedetails.BILL_TO_NBR) as BILL_TO_NBR,
+trim(invoicedetails.CONTROL_CUST_NBR)as CONTROL_CUST_NBR,
+CHARGES."TOTAL_CHARGES",
+CHARGES."TOTAL_COST",
+CHARGES."PROFIT",
+invoicedetails.SALES_PERSON,
+invoicedetails.ACCT_MANAGER,
+'I' AS SHIPMENT_QUOTE,
+'' as Non_revenue,
+convert_timezone('CDT',sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+FROM
+(SELECT DISTINCT
+MAIN1.ORIGFILENO,MAIN1.FILENO,INVOICE.ORIGIN,INVOICE.LEDATE,INVOICE.prefix,INVOICE.DESCR,
+case when MAIN1.ORIGFILENO = m.fileno then 'PST' ELSE 'DEL' END AS CURRENT_STATUS,awb.type,rc.rc
+FROM 
+
+(
+-----------------------------------------------------FIRST-------------------------------------------------------
+SELECT ORIGFILENO,addbill.FILENO  FROM EXPERT32.ADDBILL addbill
+left outer join expert32.invoice invo
+on addbill.fileno = invo.fileno
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-12-30'
+)
+--AND  origfileno = '10199612'
+and TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+
+-----------------------------------------------------SECOND-------------------------------------------------------
+UNION
+
+select fileno,FILENO  from expert32.INVOICE
+where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select origfileno from expert32.ADDBILL) and
+fileno not in (select fileno from expert32.ADDBILL)
+AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-12-30'
+--AND FILENO = '10199612'
+
+-----------------------------------------------------THIRD-------------------------------------------------------
+union
+
+SELECT distinct ORIGFILENO,origfileno  
+FROM EXPERT32.ADDBILL addbill
+join 
+expert32.invoice invo
+on addbill.origfileno = invo.fileno
+--where origfileno = '87000245'
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-12-30'
+)
+and TRIM(invo.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--and origfileno = '10199612' --87000245
+)MAIN1
+JOIN 
+EXPERT32.INVOICE INVOICE
+ON MAIN1.ORIGFILENO = INVOICE.FILENO
+left outer join 
+expert32.msgsent2 m
+ON MAIN1.ORIGFILENO = M.FILENO
+left outer join expert32.awb 
+on MAIN1.ORIGFILENO = awb.FILENO
+left outer join 
+(select l.fileno ,l.rc from
+expert32.linerate l 
+join
+(select fileno, max(thisline) thisline from expert32.LINERATE
+where rc in ('F','L')
+group by fileno
+)z
+on l.fileno = z.fileno
+and l.thisline = z.thisline
+)rc
+on MAIN1.ORIGFILENO = rc.FILENO
+
+--where  TRIM(INVOICE.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+)MAIN
+LEFT OUTER JOIN 
+-------------------------------------------------------CHARGES-------------------------------------------------------
+(
+SELECT MISC.ORIGFILENO,
+sum(CAST(CASE WHEN M.MSG = 'I:AAR' THEN (CASE WHEN  I.LEDATE = E.LEDATE AND I.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC1 * E.RATE
+ELSE BCRC1 END) ELSE 0 END  AS DECIMAL(10,2)))AS "TOTAL_CHARGES",
+sum(CAST(CASE WHEN M.MSG = 'I:AAP' THEN (CASE WHEN  I.LEDATE = E.LEDATE AND I.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC2 * E.RATE
+ELSE BCRC2 END)ELSE 0 END  AS DECIMAL(10,2)))AS "TOTAL_COST",
+sum(CAST(CASE WHEN M.MSG = 'I:AAR' THEN (CASE WHEN  I.LEDATE = E.LEDATE AND I.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC1 * E.RATE
+ELSE BCRC1 END)ELSE 0 END AS DECIMAL(10,2))) -
+sum(CAST(CASE WHEN M.MSG = 'I:AAP' THEN (CASE WHEN  I.LEDATE = E.LEDATE AND I.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC2 * E.RATE
+ELSE BCRC2 END) ELSE 0 END AS DECIMAL(10,2))) AS "PROFIT"
+ FROM 
+EXPERT32.INVOICE I
+JOIN
+(
+-----------------------------------------------------FIRST-------------------------------------------------------
+SELECT ORIGFILENO,addbill.FILENO  FROM EXPERT32.ADDBILL addbill
+left outer join expert32.invoice invo
+on addbill.fileno = invo.fileno
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-12-30'
+)
+--AND  origfileno = '37502547'
+and TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+
+-----------------------------------------------------SECOND-------------------------------------------------------
+UNION
+
+select fileno,FILENO  from expert32.INVOICE
+where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select origfileno from expert32.ADDBILL) and
+fileno not in (select fileno from expert32.ADDBILL)
+AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-12-30'
+--AND FILENO = '37502547'
+
+-----------------------------------------------------THIRD-------------------------------------------------------
+union
+
+SELECT distinct ORIGFILENO,origfileno  
+FROM EXPERT32.ADDBILL addbill
+join 
+expert32.invoice invo
+on addbill.origfileno = invo.fileno
+--where origfileno = '87000245'
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-12-30'
+)
+and TRIM(invo.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--and origfileno = '10199612' --87000245
+
+)MISC
+ON MISC.FILENO = I.FILENO
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON I.LEDATE = E.LEDATE
+AND I.CURRENCY = E.CURRFROM
+AND E.CURRTO = 'USD'
+LEFT OUTER JOIN expert32.MSGSENT2 M
+ON I.FILENO = M.FILENO
+--AND M.MSG = 'I:AAR'
+--WHERE MISC.ORIGFILENO = '37502547'
+where TRIM(I.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+GROUP BY MISC.ORIGFILENO
+)CHARGES
+ON
+MAIN.ORIGFILENO = CHARGES.ORIGFILENO
+-------------------------------------------------------CHARGES-------------------------------------------------------
+---------------------------------------------------------------INVOICE_DETAILS------------------------------------------------------------------
+left outer join 
+(
+select
+origfileno,
+invoice_nbr,
+invoice_Date,
+controlling_Stn,
+revenue_Stn,
+BILL_TO_NBR,
+CONTROL_CUST_NBR,
+SALES_PERSON,
+ACCT_MANAGER
+from
+(select 
+maxinvoice.origfileno,
+maxinvoice.fileno as invoice_nbr,
+maxinvoice.TOTAL_CHARGES,
+count(*)over (partition by maxinvoice.origfileno)countinv  ,
+sum(maxinvoice.total_charges) over (partition by maxinvoice.origfileno)  as charges,
+maininvoice.ledate as invoice_Date,
+maininvoice.origin as controlling_Stn,
+maininvoice.origin as revenue_Stn,
+maininvoice.ACCTNO AS BILL_TO_NBR,
+maininvoice.ACCTNO AS CONTROL_CUST_NBR,
+CUST.SALES AS SALES_PERSON,
+CUST.SALES2 AS ACCT_MANAGER
+from 
+(select 
+x.origfileno, 
+y.fileno,
+x.TOTAL_CHARGES
+from 
+(
+select misc.origfileno,
+max(CAST(CASE WHEN M.MSG = 'I:AAR' THEN (CASE WHEN  I.LEDATE = E.LEDATE AND I.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC1 * E.RATE
+ELSE BCRC1 END) ELSE 0 END  AS DECIMAL(10,2))) AS "TOTAL_CHARGES"
+from 
+expert32.invoice I
+join 
+(
+-----------------------------------------------------FIRST-------------------------------------------------------
+SELECT ORIGFILENO,ADDBILL.FILENO 
+FROM EXPERT32.ADDBILL 
+left outer join expert32.invoice invo
+on addbill.fileno = invo.fileno
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-01-01'
+)
+--AND  origfileno = '37502547'
+and TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND  origfileno = '37502547'
+
+-----------------------------------------------------SECOND-------------------------------------------------------
+UNION
+
+select fileno,fileno from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select origfileno from expert32.ADDBILL) and
+fileno not in (select fileno from expert32.ADDBILL)
+AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-01-01'
+--AND FILENO = '37502547'
+-----------------------------------------------------THIRD-------------------------------------------------------
+union
+
+SELECT distinct ORIGFILENO,origfileno  
+FROM EXPERT32.ADDBILL addbill
+join 
+expert32.invoice invo
+on addbill.origfileno = invo.fileno
+--where origfileno = '87000245'
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-12-30'
+)
+and TRIM(invo.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--and origfileno = '10199612' --87000245
+
+
+)misc
+on i.fileno = misc.fileno
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON I.LEDATE = E.LEDATE
+AND I.CURRENCY = E.CURRFROM
+AND E.CURRTO = 'USD'
+LEFT OUTER JOIN expert32.MSGSENT2 M
+ON I.FILENO = M.FILENO
+AND M.MSG = 'I:AAR'
+group by misc.origfileno
+)x
+join 
+(
+select a.origfileno,inv.fileno,
+CAST(CASE WHEN M.MSG = 'I:AAR' THEN (CASE WHEN  Inv.LEDATE = E.LEDATE AND inv.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC1 * E.RATE
+ELSE BCRC1 END) ELSE 0 END  AS DECIMAL(10,2)) charges
+from
+expert32.invoice inv join 
+(
+-----------------------------------------------------FIRST-------------------------------------------------------
+SELECT ORIGFILENO,ADDBILL.FILENO 
+FROM EXPERT32.ADDBILL 
+left outer join expert32.invoice invo
+on addbill.fileno = invo.fileno
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-01-01'
+)
+--AND  origfileno = '37502547'
+and TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+
+-----------------------------------------------------SECOND-------------------------------------------------------
+UNION
+
+select fileno,fileno from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select origfileno from expert32.ADDBILL) and
+fileno not in (select fileno from expert32.ADDBILL)
+AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-01-01'
+--AND FILENO = '37502547'
+
+-----------------------------------------------------THIRD-------------------------------------------------------
+UNION
+
+SELECT distinct ORIGFILENO,origfileno  
+FROM EXPERT32.ADDBILL addbill
+join 
+expert32.invoice invo
+on addbill.origfileno = invo.fileno
+--where origfileno = '87000245'
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-12-30'
+)
+and TRIM(invo.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--and origfileno = '10199612' --87000245
+
+)a
+on inv.fileno = a.fileno
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON inv.LEDATE = E.LEDATE
+AND inv.CURRENCY = E.CURRFROM
+AND E.CURRTO = 'USD'
+LEFT OUTER JOIN expert32.MSGSENT2 M
+ON inv.FILENO = M.FILENO
+AND M.MSG = 'I:AAR'
+)y
+on x.origfileno = y.origfileno
+and x.total_charges =  y.charges
+)maxinvoice
+join 
+expert32.invoice maininvoice
+on maxinvoice.fileno = maininvoice.fileno
+LEFT OUTER JOIN
+expert32.CUSTOMER CUST
+ON maininvoice.ACCTNO = CUST.ACCTNO
+where 
+maxinvoice.total_charges >0 
+)
+where total_charges <> charges/countinv
+
+union
+select
+origfileno,
+invoicenbr,
+maininvoice.ledate as invoice_Date,
+maininvoice.origin as controlling_Stn,
+maininvoice.origin as revenue_Stn,
+maininvoice.ACCTNO AS BILL_TO_NBR,
+maininvoice.ACCTNO AS CONTROL_CUST_NBR,
+CUST.SALES AS SALES_PERSON,
+CUST.SALES2 AS ACCT_MANAGER
+from
+(select origfileno,min(fileno)invoicenbr from
+(
+-----------------------------------------------------FIRST-------------------------------------------------------
+SELECT ORIGFILENO,ADDBILL.FILENO 
+FROM EXPERT32.ADDBILL 
+left outer join expert32.invoice invo
+on addbill.fileno = invo.fileno
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-01-01'
+)
+--AND  origfileno = '37502547'
+and TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+
+-----------------------------------------------------SECOND-------------------------------------------------------
+UNION
+
+select fileno,fileno from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select origfileno from expert32.ADDBILL) and
+fileno not in (select fileno from expert32.ADDBILL)
+AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-01-01'
+--AND FILENO = '37502547'
+-----------------------------------------------------THIRD-------------------------------------------------------
+UNION
+SELECT distinct ORIGFILENO,origfileno  
+FROM EXPERT32.ADDBILL addbill
+join 
+expert32.invoice invo
+on addbill.origfileno = invo.fileno
+--where origfileno = '87000245'
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND LEDATE >= '2019-12-30'
+)
+and TRIM(invo.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--and origfileno = '10199612' --87000245
+
+
+)
+group by origfileno
+)mininvoice
+join 
+expert32.invoice maininvoice
+on mininvoice.invoicenbr = maininvoice.fileno
+LEFT OUTER JOIN
+expert32.CUSTOMER CUST
+ON maininvoice.ACCTNO = CUST.ACCTNO
+)as invoicedetails
+on 
+MAIN.ORIGFILENO = invoicedetails.ORIGFILENO
+---------------------------------------------------------------INVOICE_DETAILS------------------------------------------------------------------
+--WHERE MAIN.ORIGFILENO = '37502547'
+--WHERE MAIN.ORIGFILENO = '87000245'
+--WHERE MAIN.ORIGFILENO= '10199612'
+WHERE MAIN.LEDATE >= '2017-12-30'
+
+
+union
+
+
+SELECT DISTINCT
+'EE' SOURCE_SYSTEM,
+AWB.FILENO AS FILE_NBR,
+AWB.LEDATE AS FILE_DATE,
+case when awb.fileno = ORIG.fileno then ORIG.Origin end as HANDLING_STN,
+invoice_Details.CONTROLLING_STN,
+invoice_Details.revenue_STN,
+GREATEST(AWB.ATDEL,AWB.ETA,AWB.ETD,AWB.LEDATE) AS REV_RECOGNITION_DATE,
+regexp_replace(AWB.MAWB, '\r|\n', '') AS MASTER_BILL_NBR,
+AWB.HAWB AS HOUSE_BILL_NBR,
+'' AS PICKUP_ZONE,
+AWB.ORIGIN AS ORIGIN_PORT_IATA,
+AWB.DEST AS DEST_PORT_IATA,
+concat(concat(AWB.ORIGIN,'-'),AWB.DEST) AS TRADE_LANE,
+'' AS DELIVERY_ZONE,
+translate(SHIPPER.NAME,'|','') AS SHIPPER_NAME,
+translate(SHIPPER.ADDR1,'|','') AS SHIPPER_ADDR_1,
+translate(SHIPPER.ADDR2,'|','') AS SHIPPER_ADDR_2,
+translate(SHIPPER.CITY,'|','') AS SHIPPER_CITY,
+translate(SHIPPER.STATEPROV,'|','') AS SHIPPER_ST,
+translate(SHIPPER.COUNTRY,'|','') AS SHIPPER_CNTRY,
+SHIPPER.POSTCODE AS SHIPPER_ZIP,
+translate(CONSIGNEE.NAME,'|','') AS CONSIGNEE_NAME ,
+translate(CONSIGNEE.ADDR1,'|','') AS CONSIGNEE_ADDR_1,
+translate(CONSIGNEE.ADDR2,'|','') AS CONSIGNEE_ADDR_2,
+translate(CONSIGNEE.CITY,'|','') AS CONSIGNEE_CITY,
+translate(CONSIGNEE.STATEPROV,'|','') AS CONSIGNEE_ST,
+translate(CONSIGNEE.COUNTRY,'|','') AS CONSIGNEE_CNTRY,
+CONSIGNEE.POSTCODE AS CONSIGNEE_ZIP,
+regexp_replace(TRANSLATE(AWB.NQG,'|',''), '\r|\n', '') AS DESCRIPTION,
+coalesce(DIMS.PCS,cast(coalesce(nullif(awb.pcs,''),'0')as integer)) AS PIECES,
+ROUND(cast(CASE WHEN AWB.KGLB = 'K' THEN cast(coalesce(nullif(gwt,''),'0') as float)*2.20462 ELSE cast(coalesce(nullif(gwt,''),'0') as float) END as decimal(10,2))) AS ACTUAL_WGHT_LBS,
+ROUND(cast(CASE WHEN AWB.KGLB = 'L'THEN  cast(coalesce(nullif(gwt,''),'0') as float)/2.20462 else cast(coalesce(nullif(gwt,''),'0') as float) end as decimal(10,2))) AS ACTUAL_WGHT_KGS,
+ROUND(cast(CASE WHEN AWB.KGLB = 'K' THEN cast(coalesce(nullif(REGEXP_REPLACE(CHWT,',',''),''),'0') as float)*2.20462 ELSE  cast(coalesce(nullif(REGEXP_REPLACE(CHWT,',',''),''),'0') as float) END as decimal(10,2)))  AS CHRG_WGHT_LBS,
+ROUND(cast(CASE WHEN AWB.KGLB = 'L' THEN cast(coalesce(nullif(REGEXP_REPLACE(CHWT,',',''),''),'0') as float)/2.20462 ELSE cast(coalesce(nullif(REGEXP_REPLACE(CHWT,',',''),''),'0') as float) END as decimal(10,2))) AS CHRG_WGHT_KGS,
+0 AS CUBIC_FEET,
+0 AS CUBIC_METERS,
+AWB.PICKUPTIME AS PICKUP_DATE,
+AWB.ATDEL AS POD_DATE,
+AWB.eta as ETA_DATE,
+AWB.etd as ETD_DATE,
+awb.etdel as schd_delv_Date,
+upper(AWB.SERVTYPE) AS SERVICE_LVL,
+case invoice_details.prefix
+when '01' then 'Freight'
+when '02' then 'Freight'
+when '03' then 'Freight'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Freight'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Warehouse/VAS'
+when '08' then 'Freight'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Freight'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Internal'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Internal'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Warehouse/VAS'
+when '34' then 'Warehouse/VAS'
+when '36' then 'Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then 'Freight'
+when '42' then 'Freight'
+when '43' then 'Freight'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Freight'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' 
+end as shipment_activity,
+case when invoice_details.controlling_Stn = 'AUS' and invoice_details.prefix = '05' then 'Small Pack' else case invoice_details.prefix
+when '01' then 'International'
+when '02' then 'International'
+when '03' then 'International'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Domestic'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Warehouse/VAS'
+when '08' then 'Domestic'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Small Pack'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Internal'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Internal'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Warehouse/VAS'
+when '34' then 'Warehouse/VAS'
+when '36' then 'Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then 'International'
+when '42' then 'International'
+when '43' then 'Small Pack'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Domestic'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' end
+end as shipment_type,
+
+case 
+when invoice_details.controlling_Stn = 'AUS' and invoice_details.prefix = '05' then 'Small Pack' 
+when AWB.SERVTYPE = '' then 'Standard'
+else
+(case when  invoice_details.prefix in ('01','02','03','05','08','41','42','46') then 
+decode(AWB.SERVTYPE ,
+'+300KG(HSINCHU)','Standard',
+'1 day freight','Expedited',
+'2 DAY SERVICE','Expedited',
+'20'' Container','Standard',
+'2ND DAY','Expedited',
+'3 DAY SERVICE','Expedited',
+'3-5 DAY FREIGHT',	'Standard',
+'40'' Container','Standard',
+'40HQ Container','Standard',
+'4PL','Small Pack',
+'501-1000 KG','Standard',
+'6W NonPEZA - Manila','Standard',
+'9A','Standard',
+'ADHOC RATE','Standard',
+'AIR','Standard',
+'CA Standard','Standard',
+'CONSOL','Standard',
+'Consolidated','Standard',
+'COURIER','Small Pac',
+'Cross Border','Transborder',
+'Customs Entry','Standard',
+'CX','Standard',
+'D.G.R. CARGO','Standard',
+'DANGEROUS GOODS','Standard',
+'DEDICATED TRUCK','Expedited',
+'DEFERRED SERVICE','Standard',
+'DEFFERED 3-5 DAYS','Standard',
+'DELIVERY CHARGE','Standard',
+'DGR SERVICE','Standard',
+'DHL','Small pac',
+'DIRECT','Standard',
+'DOMESTIC','Standard',
+'DOOR TO DOOR','Standard',
+'Drop ship','Standard',
+'Drop Ship Exp','Expedited',
+'Drop Ship Std','Standard',
+'DYNASTY','Expedited',
+'Economy','Standard',
+'EPX','Expedited',
+'EVA PRIORITY','Expedited',
+'Exp licence fee RTN','Expedited',
+'EXPEDITE','Expedited',
+'Expedite Req','Expedited',
+'Expedited','Expedited',
+'EXPRESS','Expedited',
+'EXPRESS DTD','Expedited','EXPRESS OVERNIGHT','Expedited','FCL','Standard','fed ex','Small pac','FEDEX','Small pac','FIRST OVERNIGHT','Expedited',
+'freighter','Standard','Full Truck Load','Standard','General','Standard','GENERAL LIFT PLUS','Standard','GROUND','Standard','Hand Carry','Expedited',
+'HAZARDOUS MATERIAL','Standard','HKG TC (Dialog GMBH)','Standard','HOT SHOT','Standard','IE','Standard','IMPORT','Standard','Intermodel','Standard','INTERNATIONAL','Standard',
+'KZ AD-HOC (SORAA)','Standard','LCL','Standard','Loading Charge','Standard','LOCAL','Standard','LOCAL DELIVERY','Standard','LOCAL PICK UP',	'Standard',
+'ltl','Standard','LTL SERVICE',	'Standard','LTL/Ground','Standard','Messenger',	'Expedited','NEXT DAY SVC',	'Expedited','NFG',	'Expedited','NFO',	'Expedited','NORMAL',	'Standard','Ocean',	'Standard','OCEAN SHIPMENT',	'Standard',
+'OTHER','Standard','Overnight',	'Expedited','PA',	'Standard','PARTICIAL TRUCKLOAD',	'Standard','PB','Standard','Peak Season',	'Standard','Perishable','Expedited','PN',	'Standard','Premiere Service',	'Expedited','Premium',	'Expedited',
+'PRIORITISE','Expedited','PRIORITY','Expedited','QUARANTINE INSPECTIO',	'Standard','QUICKPAK',	'Standard','RETURN CARGO',	'Standard','RUSH','Expedited','SA',	'Standard','Sameday',	'Expedited','Sensitive',	'Expedited','Special',	'Expedited',
+'Special delivery',	'Expedited','special pickup','Expedited','st','Standard','stan','Standard','STANDARD','Standard','STANDARD (MON-SAT)','Standard','Storage',	'Standard','Storage Delivery',	'Standard','STORAGE FEE',	'Standard',
+'Swiftrider','Expedited','TD-FLASH','Expedited','TG Express','Expedited',
+'TRADE SHOW - CARNET',	'Standard','TRADESHOW',	'Standard','Truck',	'Standard','TRUCKLOAD',	'Expedited','UPS',	'Small pac','UPS 2ND DAY AM',	'Small pac','URGENT','Expedited',
+'Warehouse','Standard','XP Service','Expedited','XPS','Expedited','' )
+when invoice_details.prefix = '04' then 'Warehouse/VAS'
+when invoice_details.prefix = '06' then 'Warehouse/VAS'
+when invoice_details.prefix = '07' then 'Offshore Warehouse/VAS'
+when invoice_details.prefix = '09' then 'Warehouse/VAS'
+when invoice_details.prefix = '10' then 'Small Pack'
+when invoice_details.prefix = '11' then 'Warehouse/VAS'
+when invoice_details.prefix = '15' then 'Finance'
+when invoice_details.prefix = '18' then 'Warehouse/VAS'
+when invoice_details.prefix = '19' then 'Finance'
+when invoice_details.prefix = '20' then 'Warehouse/VAS'
+when invoice_details.prefix = '21' then 'Warehouse/VAS'
+when invoice_details.prefix = '23' then 'Warehouse/VAS'
+when invoice_details.prefix = '31' then 'Offshore Warehouse/VAS'
+when invoice_details.prefix = '34' then 'Offshore Warehouse/VAS'
+when invoice_details.prefix = '36' then 'Offshore Warehouse/VAS'
+when invoice_details.prefix = '37' then 'Warehouse/VAS'
+when invoice_details.prefix = '38' then 'Warehouse/VAS'
+when invoice_details.prefix = '39' then 'Offshore Warehouse/VAS'
+when invoice_details.prefix = '40' then 'SG GST (WH/VAS)'
+when invoice_details.prefix = '43' then 'Freight'
+when invoice_details.prefix = '44' then 'Warehouse/VAS'
+when invoice_details.prefix = '45' then 'Warehouse/VAS'
+when invoice_details.prefix = '48' then 'Warehouse/VAS'
+when invoice_details.prefix = '53' then 'Warehouse/VAS'
+else '' end) 
+end as shipment_service,
+
+case 
+when invoice_details.prefix = '03'and awb.type = 'S' then 'Ocean' 
+when (invoice_details.controlling_Stn = 'AUS' and invoice_details.prefix = '05') then 'Small Pack' 
+else 
+(case invoice_details.prefix
+when '01' then 'Air'
+when '02' then 'Air'
+when '03' then 'Air'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Ground'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Warehouse/VAS'
+when '08' then 'Domestic'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Small Pack'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Internal'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Internal'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Warehouse/VAS'
+when '34' then 'Warehouse/VAS'
+when '36' then 'Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then 'Ocean'
+when '42' then 'Export'
+when '43' then 'Small Pack'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Ground'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' end)
+end as shipment_mode,
+
+case when (invoice_details.controlling_Stn = 'AUS' and invoice_details.prefix = '05') then 'Small Pack' 
+when invoice_details.prefix ='03' and awb.type = 'S' then decode(rc.rc,'F','FCL','L','LCL',rc.rc)
+else 
+case invoice_details.prefix
+when '01' then 'Air freight'
+when '02' then 'Air freight'
+when '03' then 'Air freight'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Local Pickup and Delivery'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Warehouse/VAS'
+when '08' then 'Domestic'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Small Pack'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Internal'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Internal'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Warehouse/VAS'
+when '34' then 'Warehouse/VAS'
+when '36' then 'Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then decode(rc.rc,'F','FCL','L','LCL',rc.rc)
+when '42' then decode(rc.rc,'F','FCL','L','LCL',rc.rc)
+when '43' then 'Small Pack'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Local Pickup and Delivery'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' end
+end as shipment_mode_detl,
+
+case when invoice_details.controlling_Stn = 'AUS' and invoice_details.prefix = '05' then 'Small Pack' else case invoice_details.prefix
+when '01' then 'Air Import'
+when '02' then 'Air Export'
+when '03' then '3rd Country'
+when '04' then 'Warehouse/VAS'
+when '05' then 'Local Delivery'
+when '06' then 'Warehouse/VAS'
+when '07' then 'Offshore Warehouse/VAS'
+when '08' then 'Domestic'
+when '09' then 'Warehouse/VAS'
+when '10' then 'Small Pack'
+when '11' then 'Warehouse/VAS'
+when '15' then 'Finance'
+when '18' then 'Warehouse/VAS'
+when '19' then 'Finance'
+when '20' then 'Warehouse/VAS'
+when '21' then 'Warehouse/VAS'
+when '23' then 'Warehouse/VAS'
+when '31' then 'Offshore Warehouse/VAS'
+when '34' then 'Offshore Warehouse/VAS'
+when '36' then 'Offshore Warehouse/VAS'
+when '37' then 'Warehouse/VAS'
+when '38' then 'Warehouse/VAS'
+when '39' then 'Offshore Warehouse/VAS'
+when '40' then 'SG GST (WH/VAS)'
+when '41' then 'Ocean Import'
+when '42' then 'Ocean Export'
+when '43' then 'Freight'
+when '44' then 'Warehouse/VAS'
+when '45' then 'Warehouse/VAS'
+when '46' then 'Freight'
+when '48' then 'Warehouse/VAS'
+when '53' then 'Warehouse/VAS'
+else '' end
+end AS MODEID,
+AWB.NQG2 AS CURRENT_STATUS,
+invoice_Details.INVOICE_NBR,
+invoice_Details.INVOICE_DATE,
+invoice_Details.BILL_TO_NBR,
+invoice_Details.CONTROL_CUST_NBR,
+CHARGES.TOTAL_CHARGES AS "TOT_CHARGES",
+CHARGES.TOTAL_COST AS "TOT_COST",
+CHARGES.PROFIT AS PROFIT,
+invoice_Details.SALES_PERSON,
+invoice_Details.ACCT_MANAGER,
+'S' AS SHIPMENT_QUOTE,
+'' as Non_revenue,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+FROM 
+EXPERT32.AWB AWB
+left outer join expert32.invoice orig
+on awb.fileno = orig.fileno
+LEFT OUTER JOIN
+(
+SELECT A.ACCTNO,
+A.NAME,A.ADDR1,A.ADDR2,A.CITY,A.STATEPROV,B.COUNTRY,A.POSTCODE
+FROM expert32.CUSTOMER A JOIN expert32.AIRPORT B ON A.AIRPORT = B.CODE
+)SHIPPER
+ON AWB.SHPRACCT = SHIPPER.ACCTNO
+LEFT OUTER JOIN
+(SELECT A.ACCTNO,
+A.NAME,A.ADDR1,A.ADDR2,A.CITY,A.STATEPROV,B.COUNTRY,A.POSTCODE
+FROM expert32.CUSTOMER A JOIN expert32.AIRPORT B ON A.AIRPORT = B.CODE
+)CONSIGNEE
+ON AWB.CNEEACCT = CONSIGNEE.ACCTNO
+LEFT OUTER JOIN
+(SELECT FILENO, SUM(PCS)PCS FROM expert32.DIMS GROUP BY FILENO) DIMS
+ON AWB.FILENO = DIMS.FILENO
+left outer join 
+(select l.fileno ,l.rc from
+expert32.linerate l 
+join
+(select fileno, max(thisline) thisline from expert32.LINERATE
+where rc in ('F','L')
+group by fileno
+)z
+on l.fileno = z.fileno
+and l.thisline = z.thisline
+)rc
+on awb.fileno = rc.fileno
+
+---------------------------------------------/*CHARGES*/---------------------------------------------
+left outer join 
+(select 
+b.file_nbr, 
+sum(CAST(CASE WHEN M.MSG = 'I:AAR' THEN (CASE WHEN  a.LEDATE = E.LEDATE AND a.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC1 * E.RATE
+ELSE BCRC1 END) ELSE 0 END  AS DECIMAL(10,2)))AS "TOTAL_CHARGES",
+sum(CAST(CASE WHEN M.MSG = 'I:AAP' THEN (CASE WHEN  a.LEDATE = E.LEDATE AND a.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC2 * E.RATE
+ELSE BCRC2 END)ELSE 0 END  AS DECIMAL(10,2)))AS "TOTAL_COST",
+sum(CAST(CASE WHEN M.MSG = 'I:AAR' THEN (CASE WHEN  a.LEDATE = E.LEDATE AND a.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC1 * E.RATE
+ELSE BCRC1 END)ELSE 0 END AS DECIMAL(10,2))) -
+sum(CAST(CASE WHEN M.MSG = 'I:AAP' THEN (CASE WHEN  a.LEDATE = E.LEDATE AND a.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC2 * E.RATE
+ELSE BCRC2 END) ELSE 0 END AS DECIMAL(10,2))) AS "PROFIT"
+
+from
+expert32.invoice A
+join
+(SELECT
+A.FILENO file_nbr,
+B.FILENO INVOICE
+FROM
+expert32.AWB A
+JOIN  EXPERT32.ADDBILL B 
+ON A.FILENO = B.ORIGFILENO
+left outer JOIN
+expert32.INVOICE I
+ON B.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND  A.FILENO = '00511837'--'92200942'--'00511837'--'68184940'--'00511837'
+
+UNION
+
+SELECT 
+A.FILENO,I.FILENO FROM 
+expert32.AWB A
+LEFT OUTER JOIN
+expert32.INVOICE I
+ON A.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND A.LEDATE >= '2019-12-30'
+--AND  A.FILENO = '00511837'--'92200942'--'00511837'--'68184940'--'00511837'
+)b
+on a.fileno = b.invoice
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON a.LEDATE = E.LEDATE
+AND a.CURRENCY = E.CURRFROM
+AND E.CURRTO = 'USD'
+LEFT OUTER JOIN expert32.MSGSENT2 M
+ON a.FILENO = M.FILENO
+--AND M.MSG = 'I:AAR'
+group by b.file_nbr
+)charges
+on AWB.fileno = charges.file_nbr
+-------------------------------------------------------------------------------------------------------------
+---------------------------------------------/*INVOICE_DETAILS*/---------------------------------------------
+left outer join 
+(
+select
+file_nbr,
+invoice_nbr,
+invoice_Date,
+controlling_Stn,
+revenue_Stn,
+BILL_TO_NBR,
+CONTROL_CUST_NBR,
+SALES_PERSON,
+ACCT_MANAGER,
+prefix
+from 
+(select 
+maxinvoice.file_nbr,
+maxinvoice.invoicenbr as invoice_nbr,
+maxinvoice.total_charges,
+count(*)over (partition by maxinvoice.file_nbr)countinv  ,
+sum(maxinvoice.total_charges) over (partition by maxinvoice.file_nbr)  as charges,
+maininvoice.ledate as invoice_Date,
+maininvoice.origin as controlling_Stn,
+maininvoice.origin as revenue_Stn,
+maininvoice.ACCTNO AS BILL_TO_NBR,
+maininvoice.ACCTNO AS CONTROL_CUST_NBR,
+CUST.SALES AS SALES_PERSON,
+CUST.SALES2 AS ACCT_MANAGER,
+maininvoice.prefix
+from 
+(select y.* from 
+(select file_nbr, max(total_charges)charges from 
+(select 
+b.file_nbr,
+a.fileno invoicenbr,
+(CAST(CASE WHEN M.MSG = 'I:AAR' THEN (CASE WHEN  a.LEDATE = E.LEDATE AND a.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC1 * E.RATE
+ELSE BCRC1 END) ELSE 0 END  AS DECIMAL(10,2)))AS "TOTAL_CHARGES"
+
+from
+expert32.invoice A
+join
+(SELECT
+A.FILENO file_nbr,
+B.FILENO INVOICE
+FROM
+expert32.AWB A
+JOIN  EXPERT32.ADDBILL B 
+ON A.FILENO = B.ORIGFILENO
+left outer JOIN
+expert32.INVOICE I
+ON B.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND  A.FILENO = '68184881'--'00511837'--'41092154'--'45127649'--'07901932'--'68184881'--'92200942'--'00511837'--'68184940'--'00511837'
+
+UNION
+
+SELECT 
+A.FILENO,I.FILENO FROM 
+expert32.AWB A
+LEFT OUTER JOIN
+expert32.INVOICE I
+ON A.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND A.LEDATE >= '2019-12-30'
+--AND  A.FILENO = '68184881'--'00511837'--'41092154'--'45127649'--'07901932'--'68184881'--'92200942'--'00511837'--'68184940'--'00511837'
+)b
+on a.fileno = b.invoice
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON a.LEDATE = E.LEDATE
+AND a.CURRENCY = E.CURRFROM
+AND E.CURRTO = 'USD'
+LEFT OUTER JOIN expert32.MSGSENT2 M
+ON a.FILENO = M.FILENO
+AND M.MSG = 'I:AAR'
+)
+group by file_nbr
+)x
+join 
+
+
+(select 
+b.file_nbr,
+a.fileno invoicenbr,
+(CAST(CASE WHEN M.MSG = 'I:AAR' THEN (CASE WHEN  a.LEDATE = E.LEDATE AND a.CURRENCY = E.CURRFROM AND E.CURRTO = 'USD' THEN BCRC1 * E.RATE
+ELSE BCRC1 END) ELSE 0 END  AS DECIMAL(10,2)))AS "TOTAL_CHARGES"
+
+from
+expert32.invoice A
+join
+(SELECT
+A.FILENO file_nbr,
+B.FILENO INVOICE
+FROM
+expert32.AWB A
+JOIN  EXPERT32.ADDBILL B 
+ON A.FILENO = B.ORIGFILENO
+left outer JOIN
+expert32.INVOICE I
+ON B.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND  A.FILENO = '68184881'--'00511837'--'41092154'--'45127649'--'07901932'--'68184881'--'92200942'--'00511837'--'68184940'--'00511837'
+
+UNION
+
+SELECT 
+A.FILENO,I.FILENO FROM 
+expert32.AWB A
+LEFT OUTER JOIN
+expert32.INVOICE I
+ON A.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND A.LEDATE >= '2019-12-30'
+--AND  A.FILENO = '68184881'--'00511837'--'41092154'--'45127649'--'07901932'--'68184881'--'92200942'--'00511837'--'68184940'--'00511837'
+)b
+on a.fileno = b.invoice
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON a.LEDATE = E.LEDATE
+AND a.CURRENCY = E.CURRFROM
+AND E.CURRTO = 'USD'
+LEFT OUTER JOIN expert32.MSGSENT2 M
+ON a.FILENO = M.FILENO
+AND M.MSG = 'I:AAR'
+)y
+on x.file_nbr = y.file_nbr
+and x.charges = y.total_charges
+)maxinvoice
+join 
+expert32.invoice maininvoice
+on maxinvoice.invoicenbr = maininvoice.fileno
+LEFT OUTER JOIN
+expert32.CUSTOMER CUST
+ON maininvoice.ACCTNO = CUST.ACCTNO
+where 
+maxinvoice.total_charges >0 
+)v
+where total_charges <> charges/countinv
+
+union
+
+select
+file_nbr,
+invoicenbr,
+maininvoice.ledate as invoice_Date,
+maininvoice.origin as controlling_Stn,
+maininvoice.origin as revenue_Stn,
+maininvoice.ACCTNO AS BILL_TO_NBR,
+maininvoice.ACCTNO AS CONTROL_CUST_NBR,
+CUST.SALES AS SALES_PERSON,
+CUST.SALES2 AS ACCT_MANAGER,
+maininvoice.prefix
+
+from 
+(select file_nbr,min(invoice)invoicenbr from 
+(SELECT
+A.FILENO file_nbr,
+B.FILENO INVOICE
+FROM
+expert32.AWB A
+JOIN  EXPERT32.ADDBILL B 
+ON A.FILENO = B.ORIGFILENO
+left outer JOIN
+expert32.INVOICE I
+ON B.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND  A.FILENO = '68184881'--'00511837'--'41092154'--'45127649'--'07901932'--'68184881'--'92200942'--'00511837'--'68184940'--'00511837'
+
+UNION
+
+SELECT 
+A.FILENO,I.FILENO FROM 
+expert32.AWB A
+LEFT OUTER JOIN
+expert32.INVOICE I
+ON A.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in ('100','1130','2116','3556','3557','3558','3559','3707','3855','3939','4172','4174','4197','4893','5240','9454')
+--AND A.LEDATE >= '2019-12-30'
+--AND  A.FILENO = '68184881'--'00511837'--'41092154'--'45127649'--'07901932'--'68184881'--'92200942'--'00511837'--'68184940'--'00511837'
+)
+group by file_nbr
+)mininvoice 
+join 
+expert32.invoice maininvoice
+on mininvoice.invoicenbr = maininvoice.fileno
+LEFT OUTER JOIN
+expert32.CUSTOMER CUST
+ON maininvoice.ACCTNO = CUST.ACCTNO
+)invoice_details
+-------------------------------------------------------------------------------------------------------------
+on awb.fileno = invoice_Details.file_nbr
+WHERE 
+AWB.LEDATE >= '2017-12-30'
+AND AWB.TYPE NOT IN('M','O')
+$$
+)
+TO 's3://dw-datapipeline-prod/Data/shipment_info/ee_shipments/'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+ALLOWOVERWRITE

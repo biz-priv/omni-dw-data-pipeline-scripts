@@ -1,0 +1,134 @@
+UNLOAD
+(
+$$
+select
+si.source_system AS "Source System",
+si.file_nbr AS "File Number",
+si.file_Date AS "File Date",
+si.handling_stn  AS "Handling Station",
+handlingstn.location as "Handling Location",
+handlingstn.region as "Handling Region",
+si.controlling_stn AS "Controlling Station",
+controllingstn.location as "Controlling Location",
+controllingstn.region as "Controlling Region",
+si.revenue_stn AS "Revenue Station",
+revenuestn.location as "Revenue Location",
+revenuestn.region as "Revenue Region",
+si.rev_recognition_date AS "Revenue Recognition Date",
+si.mASter_bill_nbr AS "Master WayBill",
+si.house_bill_nbr AS "House WayBill",
+si.pickup_zone AS "PickUp Zone",
+si.origin_port_iata AS "Origin Port",
+si.destination_port_iata AS "Destination Port",
+si.trade_lane AS "Trade Lane",
+si.delivery_zone AS "Delivery Zone",
+si.shipper_name AS "Shipper Name",
+si.shipper_addr_1 AS "Shipper Addr 1",
+si.shipper_addr_2 AS "Shipper Addr 2",
+si.shipper_city AS "Shipper City",
+si.shipper_st as "Shipper State",
+shippercntry.iso_code AS "Shipper Country",
+si.shipper_zip AS "Shipper Zip",
+shipperregion.region as "Shipper Region",
+shippercntry.continent as "Shipper Continent",
+si.consignee_name AS "Consignee Name",
+si.consignee_addr_1 AS "Consignee Addr 1",
+si.consignee_addr_2 AS "Consignee Addr 2",
+si.consignee_city  AS "Consignee City",
+si.consignee_st AS "Consignee State",
+consigneecntry.iso_code AS "Consignee Country",
+si.consignee_zip AS "Consignee Zip",
+consigneeregion.region as "Consignee Region",
+consigneecntry.continent as "Consignee continent",
+si.description as "Description",
+si.pieces AS "Pieces",
+si.actual_wght_lbs AS "Actual Weight Lbs",
+si.actual_wght_kgs AS "Actual Weight Kgs",
+si.chrg_wght_lbs AS "Chargable Weight Lbs",
+si.chrg_wght_kgs AS "Chargable Weight Kgs",
+si.cubic_feet as "cubic feet",
+si.cubic_meters as "cubic meters",
+si.pickup_Date AS "PickUp Date",
+si.pod_Date AS "POD Date",
+si.eta_Date as "ETA Date",
+si.etd_Date as "ETD Date",
+si.schd_Delv_Date as "Scheduled Delivery date",
+si.service_level as "Service Level",
+si.shipment_activity as "shipment activity",
+si.shipment_type as "shipment type",
+si.shipment_service as "shipment service",
+si.shipment_mode as "Shipment Mode",
+si.shipment_mode_detl as "Shipment mode detail",
+si.modeid AS "Mode",
+si.current_Status AS "Current Status",
+status.order_status_desc  as "Current Status Desc",
+si.invoice_number AS "Original Inv.Number",
+si.invoice_Date AS "Original Inv.Date",
+trim(si.bill_to_nbr) as "Original Bill to Number",
+bc.name AS "Original Bill to Customer",
+cc.name AS "Original Control Customer",
+trim(si.cntrl_cust_nbr) as "Original Control Number" ,
+si.tot_charges AS "Total Shipment Charges",
+si.tot_costs AS "Total Shipment Costs",
+si.profit AS "Total Shipment Profit",
+si.sales_person AS "Sales Person",
+si.accnt_manager AS "Account Manager",
+DECODE(si.shipment_quote,'S','Shipment','Q','Quote','I', 'Invoice',si.shipment_quote) AS "Record Type" ,
+si.non_Revenue as "Non Revenue",
+
+case when (DATEDIFF('day', "pickup date", "pod date"))
+-(DATEDIFF('week',"pickup date", "pod date") * 2)
+-(CASE WHEN DATE_PART(dow, "pickup date") = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, "pod date") = 6 THEN 1 ELSE 0 END) 
+< 0  then 0 
+else (DATEDIFF('day', "pickup date", "pod date"))
+-(DATEDIFF('week',"pickup date", "pod date") * 2)
+-(CASE WHEN DATE_PART(dow, "pickup date") = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, "pod date") = 6 THEN 1 ELSE 0 END) end
+as "Pickup to POD",
+
+ case when
+(DATEDIFF('day', "pickup date", "scheduled delivery date"))
+-(DATEDIFF('week',"pickup date", "scheduled delivery date") * 2)
+-(CASE WHEN DATE_PART(dow, "pickup date") = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, "scheduled delivery date") = 6 THEN 1 ELSE 0 END) 
+< 0 then 0 
+else 
+(DATEDIFF('day', "pickup date", "scheduled delivery date"))
+-(DATEDIFF('week',"pickup date", "scheduled delivery date") * 2)
+-(CASE WHEN DATE_PART(dow, "pickup date") = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, "scheduled delivery date") = 6 THEN 1 ELSE 0 END)  
+end
+ as "Pickup to Scheduled",
+
+convert_timezone('CDT', sysdate) AS "LOAD CREATE DATE",
+CAST(NULL AS timestamp) AS "LOAD UPADTE DATE"
+from shipment_info si 
+left outer join customers cc
+on 
+si.source_system  = cc.source_system 
+and si.cntrl_cust_nbr = cc.nbr 
+left outer join customers bc
+on si.source_system = bc.source_system 
+and trim(si.bill_to_nbr) = bc.nbr 
+left outer join iso_country shippercntry
+on si.shipper_cntry = shippercntry.iso_code 
+left outer join us_regions shipperregion
+on si.shipper_st = shipperregion.state_cd
+left outer join iso_country consigneecntry
+on si.consignee_cntry = consigneecntry.iso_code 
+left outer join us_regions consigneeregion
+on si.consignee_st = consigneeregion.state_cd
+left outer join office_location handlingstn
+on si.handling_stn   = handlingstn.stn
+left outer join office_location controllingstn
+on si.controlling_stn    = controllingstn.stn
+left outer join office_location revenuestn
+on si.revenue_stn = revenuestn.stn
+left outer join shipment_status status
+on si.current_status = status.order_status_id 
+$$
+)
+TO 's3://dw-datapipeline-prod/Data/shipment_info/shipment_extract/'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+ALLOWOVERWRITE

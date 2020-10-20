@@ -1,0 +1,2 @@
+insert into api_token (source_system,cust_nbr) (select source_system,nbr from customers 
+where source_system+nbr NOT IN (Select source_system+cust_nbr from api_token));

@@ -1,0 +1,8 @@
+truncate table datamart.AP_INVOICES;
+COPY datamart.AP_INVOICES 
+FROM 's3://dw-datapipeline-prod/Data/Invoices/dm_ap_data1' 
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+COMPUPDATE OFF 
+STATUPDATE OFF;
+
+

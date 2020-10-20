@@ -1,0 +1,372 @@
+unload
+(
+$$
+select 
+'EE' as source_system,
+main.fileno,
+'' as service_level,
+'' as "mode",
+decode(c.carrier ,'77','APP','A7','REF','AH','ADL','AJ','OFD','C3','APU','NFD','DOA','P1','DPO','PR','CEH','R1','REC','SD','SDE','X1','AAD','X2','APD','X4','DLA','X7','AAP','X9','AAO','AN','TTC','')Order_Status,
+decode (c.carrier,'77','PICK UP APPOINTMENT SCHEDULED','A7','SHIPMENT REFUSED','AH','DELIVERY ATTEMPTED','AJ','OUT FOR DELIVERY','C3','PICK UP ATTEMPT',
+'NFD','DEST OFFICE ALERTED','P1','DEPARTED PORT','PR','CUSTOMS EXAM HOLD','R1','RECOVERED FROM CARRIER','SD','SHIPMENT DELAYED','X1','ARRIVED AT DELIVERY LOCATION',
+'X2','DELIVERY APPOINTMENT SCHEDULED','X4','ARRIVED AT DESTINATION','X7','ARRIVED AT PORT','X9','ARRIVED AT OMNI DESTINATION',
+'AN','SHIPMENT TENDERED TO CARRIER FOR EXPORT','') as Order_Status_Desc,
+CONVERT_TIMEZONE (air.timezone ,'UTC',c.ledate )event_date_utc,
+'' as event_timezone,
+c.ledate as event_Date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+expert32.awb main
+join 
+(select a.awb,a.carrier,b.ledate,a.origin 
+from expert32.awbstat a
+join 
+(select carrier,awb,max(ledate)ledate
+from expert32.awbstat 
+where carrier in ('77','A7','AH','AJ','C3','NFD','P1','PR','R1','SD','X1','X2','X4','X7','X9','AN')
+group by carrier,awb 
+)b
+on a.awb = b.awb
+and a.carrier = b.carrier
+and a.ledate = b.ledate
+)c 
+on main.fileno = c.awb
+join expert32.airport air
+on c.origin = air.code
+where 
+main.LEDATE >= '2017-12-30'
+AND main.TYPE NOT IN('M','O')
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select distinct
+'EE' as source_system,
+b.fileno,
+'' as service_level,
+'' as "mode",
+'COB' as order_Status,
+'COB / INTRANSIT' as order_Status_desc,
+coalesce(CONVERT_TIMEZONE (case when air.timezone = '' then 'America/Chicago' else air.timezone end ,'UTC',a.atd),a.atd) as event_date_utc,
+'' as event_timezone,
+a.atd as event_date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+(select awbno,atd,a.origin from expert32.awbflts a 
+where leindex = 1
+and a."type" = 'C'
+)a
+join 
+expert32.awb b
+on a.awbno = b.mawb
+left outer join expert32.airport air
+on a.origin = air.code
+where a.atd is not null
+and b.LEDATE >= '2017-12-30'
+AND b.TYPE NOT IN('M','O')
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select 
+'EE' as source_system,
+b.fileno,
+'' as service_level,
+'' as "mode",
+'WUP' as order_Status,
+'WHEELS UP' as order_Status_desc,
+coalesce(CONVERT_TIMEZONE (case when air.timezone = '' then 'America/Chicago' else air.timezone end ,'UTC',a.atd),a.atd) as event_date_utc,
+'' as event_timezone,
+a.atd as event_date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+(
+select awbno,origin,min(atd)atd from expert32.awbflts a 
+where a."type" = 'C'
+and leindex=1
+group by awbno,origin
+)a
+join 
+expert32.awb b
+on a.awbno = b.mawb
+left outer join expert32.airport air
+on a.origin = air.code 
+where a.atd is not null
+and b.LEDATE >= '2017-12-30'
+AND b.TYPE NOT IN('M','O')
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select distinct
+'EE' as source_system,
+b.fileno,
+'' as service_level,
+'' as "mode",
+'WDO' as order_Status,
+'WHEELS DOWN' as order_Status_desc,
+coalesce(CONVERT_TIMEZONE (case when air.timezone = '' then 'America/Chicago' else air.timezone end ,'UTC',a.ata),a.ata) as event_date,
+'' as event_timezone,
+a.ata as event_date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+(
+select awbno,dest,max(ata)ata from expert32.awbflts a 
+where a."type" = 'C'
+group by awbno,dest
+)a
+join 
+expert32.awb b
+on a.awbno = b.mawb
+and a.dest = b.dest
+left outer join expert32.airport air
+on a.dest = air.code 
+where a.ata is not null
+and b.LEDATE >= '2017-12-30'
+AND b.TYPE NOT IN('M','O')
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select 
+'EE' as source_system,
+a.fileno,
+'' as service_level,
+'' as "mode",
+'DSB' as order_Status,
+'DOCS SUBMITTED TO BROKER' as order_Status_desc,
+coalesce(CONVERT_TIMEZONE (case when air.timezone = '' then 'America/Chicago' else air.timezone end ,'UTC',b.datetime),b.datetime) as event_date_utc,
+'' as event_timezone,
+b.datetime as event_date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+expert32.awb a
+join expert32.DOCTO b
+on a.fileno = b.fileno 
+left outer join expert32.airport air
+on a.dest = air.code
+where a.LEDATE >= '2017-12-30'
+AND a.TYPE NOT IN('M','O')
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select 
+'EE' as source_system,
+a.fileno,
+'' as service_level,
+'' as "mode",
+'CCL' as order_Status,
+'CUSTOMS CLEARED' as order_Status_Desc,
+coalesce(CONVERT_TIMEZONE (case when air.timezone = '' then 'America/Chicago' else air.timezone end ,'UTC',a.cleartime),a.cleartime) as event_date_utc,
+'' as event_timezone,
+a.cleartime as event_date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from expert32.awb a
+left outer join 
+expert32.airport air
+on a.dest = air.code
+where cleartime is not null
+and a.LEDATE >= '2017-12-30'
+AND a.TYPE NOT IN('M','O')
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select 
+'EE' as source_system,
+a.fileno,
+'' as service_level,
+'' as "mode",
+'PUP' as order_Status,
+'PICKED UP' as order_Status_Desc,
+coalesce(CONVERT_TIMEZONE (case when air.timezone = '' then 'America/Chicago' else air.timezone end ,'UTC',a.pickuptime),a.pickuptime) as event_date_utc,
+'' as event_timezone,
+a.pickuptime as event_date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from expert32.awb a
+left outer join expert32.customer cust
+on trim(a.shpracct) = trim(cust.acctno)
+left outer join expert32.airport air
+on coalesce(cust.airport,a.origin) = air.code
+where a.pickuptime is not null
+and a.LEDATE >= '2017-12-30'
+AND a.TYPE NOT IN('M','O')
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+--------------------------------------------------------custom-------------------------------------------------------------------------------------------------------------------------------------------------
+select 
+'EE' as source_system,
+a.fileno,
+'' as service_level,
+'' as "mode",
+'DEL' as order_Status,
+'DELIVERED' as order_Status_Desc,
+coalesce(CONVERT_TIMEZONE (case when air.timezone = '' then 'America/Chicago' else air.timezone end ,'UTC',a.pickuptime),a.pickuptime) as event_date_utc,
+'' as event_timezone,
+a.pickuptime as event_date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from expert32.awb a
+left outer join expert32.customer cust
+on trim(a.cneeacct) = trim(cust.acctno)
+left outer join expert32.airport air
+on coalesce(cust.airport,a.origin) = air.code
+where a.pickuptime is not null
+and a.LEDATE >= '2017-12-30'
+AND a.TYPE NOT IN('M','O')
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select 
+'EE' as source_system,
+b.fileno,
+'' as service_level,
+'' as "mode",
+'COS' as order_Status,
+'COSTED' as order_Status_desc,
+a.ledate as event_Date_utc,
+'' as event_timezone,
+a.ledate as event_date,
+0 as event_Seq_nbr,
+'N' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+expert32.msgsent2 a
+join expert32.awb b
+on a.fileno = b.fileno 
+where a.msg = 'I:AAP'
+and b.LEDATE >= '2017-12-30'
+AND b.TYPE NOT IN('M','O')
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select 
+'EE' as source_system,
+b.fileno,
+'' as service_level,
+'' as "mode",
+'RFI' as order_Status,
+'READY FOR INVOICING' as order_Status_desc,
+a.ledate as event_Date_utc,
+'' as event_timezone,
+a.ledate as event_Date,
+0 as event_Seq_nbr,
+'N' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+expert32.msgsent2 a
+join expert32.awb b
+on a.fileno = b.fileno 
+where a.msg = 'I:AAR'
+and b.LEDATE >= '2017-12-30'
+AND b.TYPE NOT IN('M','O')
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select 
+'EE' as source_system,
+a.fileno,
+'' as service_level,
+'' as "mode",
+'POD' as order_Status,
+'HARD COPY POD RCVD' as order_Status_desc,
+a.ledate as event_Date_utc,
+'' as event_timezone,
+a.ledate as event_date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+(select fileno ,min(ledate)ledate from expert32.dbupdate2 a
+where sqlstmt like ('%insert into AWBFILES%\'w\'%')
+group by fileno
+)a
+join expert32.awb b
+on a.fileno = b.fileno 
+where b.LEDATE >= '2017-12-30'
+AND b.TYPE NOT IN('M','O')
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+select  
+'EE' as source_system,
+b.fileno,
+'' as service_level,
+'' as "mode",
+'WEB' as order_Status,
+'NEW WEB SHIPMENT' as order_Status_desc,
+a.create_Date as event_date_utc,
+'' as event_timezone,
+a.create_Date as event_Date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+(select srn, min(create_date)create_date
+from expert32.webshipments w 
+group by srn 
+)a
+join expert32.awb b
+on a.srn = b.fileno
+where b.LEDATE >= '2017-12-30'
+AND b.TYPE NOT IN('M','O')
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+UNION
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+select 
+'EE' as source_system,
+a.fileno,
+'' as service_level,
+'' as "mode",
+'AES' as order_Status,
+'AES FILED' as order_Status_desc,
+CONVERT_TIMEZONE ('America/Chicago','UTC',b.ledate) as event_date_utc,
+'' as event_timezone,
+b.ledate as event_date,
+0 as event_Seq_nbr,
+'Y' as is_Public,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+from 
+expert32.awb a 
+join
+(select fileno,min(ledate)ledate from expert32.msgsent2 m 
+where msg='#AESSED#' 
+and path like 'itn=%'
+group by fileno 
+)b
+on a.fileno = b.fileno
+where a.LEDATE >= '2017-12-30'
+AND a.TYPE NOT IN('M','O')
+$$
+)
+TO 's3://dw-datapipeline-prod/Data/ee_milestone_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

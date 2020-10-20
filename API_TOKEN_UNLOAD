@@ -1,0 +1,9 @@
+UNLOAD(
+'
+select source_system,nbr from dbo.customers
+'
+)
+TO 's3://dw-datapipeline-prod/Data/api_token_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

@@ -1,0 +1,92 @@
+unload(
+$$
+----------------------------------------------------------------SERVICE LEVEL IS NOT BLANK-----------------------------------------------------
+select distinct 
+'WT' as Source_System,main.PK_OrderNo,main.FK_ServiceLevelId,main.FK_ModeId,main.FK_OrderStatusId,m.Description,main.EventDateTime,main.EventTimeZone,main.EventDateTime,m.EventSeqNo,m.IsPublic,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+
+from
+(select
+a.PK_OrderNo,b.FK_ServiceLevelId,a.fk_modeid,b.FK_OrderStatusId,b.EventDateTime,b.EventTimeZone
+from dbc.tbl_ShipmentHeader a
+join
+(
+select fK_OrderNo,FK_ServiceLevelId,FK_OrderStatusId,EventDateTime,EventTimeZone
+from dbc.tbl_ShipmentMilestone
+where FK_OrderStatusId <> 'NEW'
+UNION 
+select fK_OrderNo,FK_ServiceLevelId,FK_OrderStatusId,EventDateTime,EventTimeZone
+from dbc.tbl_ShipmentMilestonedetail
+where FK_OrderStatusId = 'NEW' and complete = 'Y'
+)b
+on a.PK_OrderNo = b.FK_OrderNo
+where b.FK_ServiceLevelId <> '' and b.FK_ServiceLevelId in (select distinct FK_ServiceLevelId from dbc.tbl_Milestone where FK_ServiceLevelId <> '')
+and a.orderdate >= '2017-12-30'
+)main
+left outer join
+(select m1.FK_ServiceLevelId,m1.FK_OrderStatusId,m1.Description,m1.EventSeqNo,m1.IsPublic
+from dbc.tbl_milestone M1
+join
+(select FK_ServiceLevelId, fk_orderstatusid,max(EventSeqNo)eventseqno
+from dbc.tbl_Milestone
+group by FK_ServiceLevelId,fk_orderstatusid
+)M2
+on m1.FK_ServiceLevelId = m2.FK_ServiceLevelId
+and m1.FK_OrderStatusId = m2.FK_OrderStatusId
+and m1.EventSeqNo = m2.eventseqno
+where m1.FK_ServiceLevelId <> ''
+)M
+on main.FK_ServiceLevelId = m.FK_ServiceLevelId
+and main.FK_OrderStatusId = m.FK_OrderStatusId
+----------------------------------------------------------------SERVICE LEVEL IS NOT BLANK-----------------------------------------------------
+
+UNION
+
+----------------------------------------------------------------SERVICE LEVEL IS BLANK-----------------------------------------------------
+select distinct 
+'WT' as Source_System,main.PK_OrderNo,main.FK_ServiceLevelId,main.fk_modeid,main.FK_OrderStatusId,m.Description,main.EventDateTime,main.EventTimeZone,main.EventDateTime,m.EventSeqNo,m.IsPublic,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+
+from
+(
+select
+a.PK_OrderNo,a.FK_ServiceLevelId,a.fk_modeid,b.FK_OrderStatusId,b.EventDateTime,b.EventTimeZone
+from dbc.tbl_ShipmentHeader a
+join
+(select fK_OrderNo,FK_ServiceLevelId,FK_OrderStatusId,EventDateTime,EventTimeZone
+from dbc.tbl_ShipmentMilestone
+where FK_OrderStatusId <> 'NEW'
+UNION
+select fK_OrderNo,FK_ServiceLevelId,FK_OrderStatusId,EventDateTime,EventTimeZone
+from dbc.tbl_ShipmentMilestonedetail
+where FK_OrderStatusId = 'NEW' and complete = 'Y'
+)b
+on a.PK_OrderNo = b.FK_OrderNo
+where  (b.FK_ServiceLevelId = '' or b.FK_ServiceLevelId not in (select distinct FK_ServiceLevelId from dbc.tbl_Milestone where FK_ServiceLevelId <> ''))
+and a.orderdate >= '2017-12-30'
+)main
+join
+
+(select m1.FK_ModeId,m1.FK_OrderStatusId,m1.Description,m1.EventSeqNo,m1.IsPublic
+from dbc.tbl_milestone M1
+join
+(select FK_ModeId, fk_orderstatusid,max(EventSeqNo)eventseqno
+from dbc.tbl_Milestone
+where FK_ModeId <> ''
+group by FK_ModeId,fk_orderstatusid
+)M2
+on m1.FK_ModeId= m2.FK_ModeId
+and m1.FK_OrderStatusId = m2.FK_OrderStatusId
+and m1.EventSeqNo = m2.eventseqno
+)m
+on main.FK_ModeId= m.FK_ModeId
+and main.FK_OrderStatusId = m.FK_OrderStatusId
+----------------------------------------------------------------SERVICE LEVEL IS BLANK-----------------------------------------------------
+$$
+)
+TO 's3://dw-datapipeline-prod/Data/wt_milestone_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

@@ -1,0 +1,70 @@
+UNLOAD(
+'
+select 
+''WT'' as  Source_System,
+file_nbr,
+revenue_stn,
+controlling_Stn,
+Invoice_nbr,
+invoice_seq_nbr,
+bill_to_nbr,
+cntrl_cust_nbr,
+charge_cd,
+charge_cd_Desc, 
+invoice_Date,
+CASE WHEN CAST(d.finalizedDate AS DATE) = ''1900-01-01'' THEN NULL ELSE d.finalizedDate END as finalized_Date, 
+finalized_by,
+updated_by,
+CASE WHEN CAST(d.duedate AS DATE) = ''1900-01-01'' THEN NULL ELSE d.duedate END as due_date,
+CASE WHEN CAST(d.invprinteddate AS DATE) = ''1900-01-01'' THEN NULL ELSE d.invprinteddate END   as inv_printed_date,
+CASE WHEN CAST(d.readyforinvoicedatetime AS DATE) = ''1900-01-01'' THEN NULL ELSE d.readyforinvoicedatetime  END  as rfi_Date,
+CASE WHEN CAST(d.posteddatetime AS DATE) = ''1900-01-01'' THEN NULL ELSE d.posteddatetime END  as posted_Date,
+TOTAL ,
+convert_timezone(''CDT'',sysdate) AS LOAD_CREATE_DATE,
+convert_timezone(''CDT'',sysdate) AS LOAD_UPADTE_DATE
+from 
+(select 
+a.pk_orderno as file_nbr,
+a.handlingstation as revenue_stn,
+a.controllingstation as controlling_Stn,
+a.housebill as Invoice_nbr,
+b.invoiceseqno as invoice_seq_nbr,
+case when invoiceseqno = 0 then a.billno else b.fk_custno end as bill_to_nbr,
+a.fk_controlcustomerno as cntrl_cust_nbr,
+b.chargecode as charge_cd,
+b.description as charge_cd_Desc, 
+CASE WHEN CAST(b.invoicedate AS DATE) = ''1900-01-01'' THEN NULL ELSE b.invoicedate END  as invoice_Date,
+b.finalizedby as finalized_by,
+b.updatedby as updated_by,
+case when b.FINALIZEDTOTAL <= 0 then b.TOTAL else b.finalizedtotal end TOTAL
+from 
+dbc.tbl_shipmentheader a join 
+dbc.tbl_shipmentapar b
+on a.pk_orderno = b.fk_orderno 
+where a.orderdate >= ''2017-12-30''
+and b.aparcode = ''C''
+)a
+join 
+(select b.fk_orderno,a.housebill , b.invoiceseqno ,
+max(finalizeddate)finalizeddate,
+max(b.readyforinvoicedatetime)readyforinvoicedatetime,
+max(duedate )duedate,
+max(invprinteddate )invprinteddate,
+max(posteddatetime)posteddatetime
+from 
+dbc.tbl_shipmentheader a join
+dbc.tbl_shipmentapar b
+on a.pk_orderno = b.fk_orderno 
+where 
+b.aparcode = ''C''
+group by b.fk_orderno ,a.housebill,b.invoiceseqno 
+)d
+on 
+a.file_nbr = d.fk_orderno
+and a.Invoice_nbr  = d.housebill
+and a.invoice_seq_nbr = d.invoiceseqno
+')
+TO 's3://dw-datapipeline-prod/Data/Invoices/wt_ar_invoice_receivables_data_stage1'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint' 
+Parallel off
+ALLOWOVERWRITE

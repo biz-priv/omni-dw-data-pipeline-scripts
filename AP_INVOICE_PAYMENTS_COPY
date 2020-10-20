@@ -1,0 +1,6 @@
+truncate table public.ap_invoice_payments;
+copy ap_invoice_payments 
+from 's3://dw-datapipeline-prod/Data/Invoices/ap_invoice_payments_data' 
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+COMPUPDATE OFF 
+STATUPDATE OFF;

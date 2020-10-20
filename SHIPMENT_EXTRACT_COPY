@@ -1,0 +1,91 @@
+truncate table datamart.shipment_extract_stage;
+
+copy datamart.shipment_extract_stage from 's3://dw-datapipeline-prod/Data/shipment_extract' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+update datamart.shipment_extract set 
+"file date"=s."file date",
+"handling station" = s."handling station",
+"Handling Location" = s."Handling Location",
+"Handling Region" = s."Handling Region",
+"controlling station"=s."controlling station",
+"controlling Location" = s."controlling Location",
+"controlling Region" = s."controlling Region",
+"revenue station"=s."revenue station",
+"revenue Location" = s."revenue Location",
+"revenue Region" = s."revenue Region",
+"revenue recognition date"=s."revenue recognition date",
+"master WayBill"=s."master WayBill",
+"house WayBill"=s."house WayBill",
+"pickup zone"=s."pickup zone",
+"origin port"=s."origin port",
+"destination port"=s."destination port",
+"trade lane"=s."trade lane",
+"delivery zone"=s."delivery zone",
+"shipper name"=s."shipper name",
+"shipper addr 1"=s."shipper addr 1",
+"shipper addr 2"=s."shipper addr 2",
+"shipper city"=s."shipper city",
+"shipper state"=s."shipper state",
+"shipper country"=s."shipper country",
+"shipper zip"=s."shipper zip",
+"Shipper Region"=s."Shipper Region",
+"Shipper Continent"=s."Shipper Continent",
+"consignee name"=s."consignee name",
+"consignee addr 1"=s."consignee addr 1",
+"consignee addr 2"=s."consignee addr 2",
+"consignee city"=s."consignee city",
+"consignee state"=s."consignee state",
+"consignee country"=s."consignee country",
+"consignee zip"=s."consignee zip",
+"Consignee Region"=s."Consignee Region",
+"Consignee continent"=s."Consignee continent",
+"pieces"=s."pieces",
+"actual weight lbs"=s."actual weight lbs",
+"actual weight kgs"=s."actual weight kgs",
+"chargable weight lbs"=s."chargable weight lbs",
+"chargable weight kgs"=s."chargable weight kgs",
+"pickup date"=s."pickup date",
+"pod date"=s."pod date",
+"eta Date" = s."eta Date",
+"etd Date" = s."etd Date",
+"scheduled delivery date" = s."scheduled delivery date",
+"service level"=s."service level",
+"shipment activity" = s."shipment activity",
+"shipment type" = s."shipment type",
+"shipment service" = s."shipment service",
+"shipment mode" = s."shipment mode",
+"shipment mode detail" = s."shipment mode detail",
+"mode"=s."mode",
+"current status"=s."current status",
+"Current Status Desc" = s."Current Status Desc",
+"Original Inv.Number"=s."Original Inv.Number",
+"Original Inv.Date"=s."Original Inv.Date",
+"Original Bill to Number"=s."Original Bill to Number",
+"Original Bill to Customer"=s."Original Bill to Customer",
+"Original Control Customer"=s."Original Control Customer",
+"Original Control Number"=s."Original Control Number",
+"Total Shipment Charges"=s."Total Shipment Charges",
+"Total Shipment Costs"=s."Total Shipment Costs",
+"Total Shipment Profit"=s."Total Shipment Profit",
+"sales person"=s."sales person",
+"account manager"=s."account manager",
+"Record Type"=s."Record Type",
+"Non Revenue" = s."Non Revenue",
+"Pickup to POD" = s."Pickup to POD",
+"Pickup to Scheduled" = s."Pickup to Scheduled",
+"load update date"=s."load create date" 
+from datamart.shipment_extract_stage s 
+where 
+(
+	datamart.shipment_extract."source system"=s."source system" 
+	and datamart.shipment_extract."file number"=s."file number"
+);
+
+delete from datamart.shipment_extract_stage using datamart.shipment_extract t 
+where 
+(
+	datamart.shipment_extract_stage."source system"=t."source system" 
+	and datamart.shipment_extract_stage."file number"=t."file number"
+);
+
+insert into datamart.shipment_extract select * from datamart.shipment_extract_stage;

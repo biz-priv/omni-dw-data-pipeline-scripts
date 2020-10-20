@@ -1,0 +1,30 @@
+truncate table datamart.int_company_invoice_Stage;
+
+copy datamart.int_company_invoice_Stage from 's3://dw-datapipeline-prod/Data/wt_int_company_invoice_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+update datamart.int_company_invoice
+set 
+	vendor_name = s.vendor_name,
+	invoice_station = s.invoice_station,
+	house_bill_nbr = s.house_bill_nbr,
+	est_cost = s.est_cost,
+	load_update_date = s.load_create_date 
+from datamart.int_company_invoice_Stage s 
+where 
+(
+	int_company_invoice.source_system = s.source_system 
+	and int_company_invoice.file_nbr = s.file_nbr
+	and int_company_invoice.vendor_nbr = s.vendor_nbr
+	and int_company_invoice.invoice_date = s.invoice_date
+);
+
+delete from datamart.int_company_invoice_Stage using datamart.int_company_invoice t 
+where 
+(
+	int_company_invoice_Stage.source_system = t.source_system 
+	and int_company_invoice_Stage.file_nbr = t.file_nbr
+	and int_company_invoice_Stage.vendor_nbr = t.vendor_nbr
+	and int_company_invoice_Stage.invoice_date = t.invoice_date
+);
+
+insert into datamart.int_company_invoice select * from datamart.int_company_invoice_Stage;

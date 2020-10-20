@@ -1,0 +1,47 @@
+truncate table global_cust_name_stage;
+
+COPY global_cust_name_stage 
+FROM 's3://dw-datafiles/globalcustnames.csv' 
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint' 
+CSV
+ACCEPTINVCHARS
+;
+
+update 
+global_cust_name set 
+company = s.company,
+bill_to_name  = s.bill_to_name,
+existing_global_name = s.existing_global_name,
+new_global_name = s.new_global_name,
+care_of_name = s.care_of_name,
+subsidiary_consolidation = s.subsidiary_consolidation,
+dba = s.dba,
+care_of_filter = s.care_of_filter,
+customer_type = s.customer_type,
+load_create_date = convert_timezone('CDT', sysdate),
+load_update_date = convert_timezone('CDT', sysdate) 
+from global_cust_name_stage s 
+where 
+(
+global_cust_name.source_system = s.source_system 
+and global_cust_name.bill_to = s.bill_to
+and (
+global_cust_name.company <> s.company or 
+global_cust_name.bill_to_name  <> s.bill_to_name or 
+global_cust_name.existing_global_name <> s.existing_global_name or 
+global_cust_name.new_global_name <> s.new_global_name or 
+global_cust_name.care_of_name <> s.care_of_name or 
+global_cust_name.subsidiary_consolidation <> s.subsidiary_consolidation or 
+global_cust_name.dba <> s.dba or 
+global_cust_name.care_of_filter <> s.care_of_filter or 
+global_cust_name.customer_type <> s.customer_type 
+)
+);
+
+delete from global_cust_name_stage using global_cust_name t where 
+(
+global_cust_name_stage.source_system = t.source_system 
+and global_cust_name_stage.bill_to = t.bill_to
+);
+
+insert into global_cust_name select * from global_cust_name_stage;

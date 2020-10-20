@@ -1,0 +1,32 @@
+truncate table public.customers_stage;
+
+COPY customers_stage
+FROM 's3://dw-datapipeline-prod/Data/ee_customer_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+update 
+customers set 
+name=s.name,
+sales_rep = s.sales_rep,
+account_mgr = s.account_mgr,
+owner = s.owner,
+addr1=s.addr1,
+addr2=s.addr2,
+city=s.city,
+state=s.state,
+country=s.country,
+zip=s.zip,
+cust_contact = s.cust_contact,
+email = s.email,
+ap_email = s.ap_email,  
+billto_only = s.billto_only,
+controlling_only = s.controlling_only,
+bill_to_nbr = s.bill_to_nbr,
+controlling_nbr = s.controlling_nbr,
+station = s.station,
+load_update_date=s.load_create_date 
+from customers_stage s 
+where (customers.source_system=s.source_system and customers.nbr=s.nbr);
+
+delete from customers_stage using customers t where (customers_stage.source_system=t.source_system and customers_stage.nbr=t.nbr);
+
+insert into customers select * from customers_stage;

@@ -1,0 +1,406 @@
+unload
+(
+$$
+SELECT DISTINCT
+'WT' AS SOURCE_SYSTEM,
+A.PK_ORDERNO AS FILE_NBR,
+cast(A.OrderDate as date) AS FILE_DATE,
+A.handlingstation AS HANDLING_STN,
+A.CONTROLLINGSTATION AS CONTROLLING_STN,
+A.handlingstation AS REVENUE_STN,
+case when cast(A.ReadyDateTime as date ) = '1900-01-01' THEN NULL ELSE A.ReadyDateTime END AS REV_RECOGNITION_DATE,
+MAWB.MAWB AS MASTER_BILL_NBR,
+housebill AS HOUSE_BILL_NBR,
+OrgArea AS PICKUP_ZONE,
+orgairport AS ORIGIN_PORT_IATA,
+destairport AS DESTINATION_PORT_IATA,
+orgairport||'-'||destairport AS TRADE_LANE,
+DESTAREA AS DELIVERY_ZONE,
+translate(regexp_replace(shipper.shipname, '\r|\n', ''),'|','') AS SHIPPER_NAME,
+translate(regexp_replace(shipper.shipaddress1, '\r|\n', ''),'|','') AS SHIPPER_ADDR_1,
+translate(regexp_replace(shipper.shipaddress2, '\r|\n', ''),'|','') AS SHIPPER_ADDR_2,
+translate(regexp_replace(shipper.shipcity, '\r|\n', ''),'|','') AS SHIPPER_CITY,
+translate(shipper.fk_shipstate,'|','') AS SHIPPER_ST,
+translate(shipper.fk_shipcountry,'|','') AS SHIPPER_CNTRY,
+translate(regexp_replace(shipper.shipzip, '\r|\n', ''),'|','') AS SHIPPER_ZIP,
+translate(regexp_replace(consignee.conname, '\r|\n', ''),'|','')  AS CONSIGNEE_NAME,
+translate(regexp_replace(consignee.conaddress1, '\r|\n', ''),'|','') AS CONSIGNEE_ADDR_1,
+translate(regexp_replace(consignee.conAddress2, '\r|\n', '') ,'|','') AS CONSIGNEE_ADDR_2,
+translate(regexp_replace(consignee.concity, '\r|\n', '') ,'|','') AS CONSIGNEE_CITY,
+translate(consignee.fk_constate,'|','') AS CONSIGNEE_ST,
+translate(consignee.fk_concountry,'|','') AS CONSIGNEE_CNTRY,
+translate(regexp_replace(consignee.conzip, '\r|\n', '') ,'|','') AS CONSIGNEE_ZIP,
+translate(regexp_replace(B.DESCRIPTION, '\r|\n', '') ,'|','') AS DESCRIPTION,
+B.PIECES,
+B.WEIGHTLBS AS ACTUAL_WGHT_LBS,
+B.WEIGHTKGS AS ACTUAL_WGHT_KGS,
+B.CHARGABLEWEIGHTLBS AS CHRG_WGHT_LBS,
+B.CHARGABLEWEIGHTKGS AS CHRG_WGHT_KGS,
+B.CUBIC_FEET AS CUBIC_FEET,
+B.CUBIC_METERS AS CUBIC_METERS,
+MP.EVENTDATETIME AS  PICKUP_DATE,
+MD.EVENTDATETIME AS POD_DATE,
+case when cast(a.etadatetime as date ) = '1900-01-01' THEN NULL ELSE a.etadatetime END  as ETA_DATE,
+cast(null as timestamp) as ETD_DATE,
+case when cast(a.scheduleddatetime as date ) = '1900-01-01' THEN NULL ELSE a.scheduleddatetime END  as schd_delv_date,
+SERVICE.SERVICELEVEL as SERVICE_LEVEL,
+DECODE 
+(
+SERVICE.SERVICELEVEL,
+'2 DAY AM SERVICE','Freight',
+'2 DAY SERVICE','Freight',
+'3 DAY AM SERVICE','Freight',
+'3 DAY SERVICE','Freight',
+'4 DAY SERVICE','Freight',
+'INTL AIR EXPORT','Freight',
+'INTL AIR EXPORT DTD','Freight',
+'INTL AIR IMPORT','Freight',
+'BROKERAGE CLEARANCE','Customs Brokerage',
+'BRONZE','Freight',
+'CISCO CANADA','Freight',
+'CHARTER','Freight',
+'COMAT','Freight',
+'DRIVER','Freight',
+'ECONOMY (3-5 DAYS)','Freight',
+'FULL TRUCKLOAD','Freight',
+'GOODMAN LOCAL','Freight',
+'GOLD','Freight',
+'HOME DELIVERY','Freight',
+'HOTSHOT','Freight',
+'TRANSBORDER','Freight',
+'LOCAL PICK UP & DELIVERY','Freight',
+'PHL LOCAL','Freight',
+'LTL','Freight',
+'NEXT DAY AM','Freight',
+'NEXT DAY PM','Freight',
+'NFO (DTA)','Freight',
+'NFO (DTD)','Freight',
+'INTL OCEAN EXPORT DTD','Freight',
+'INTL OCEAN EXPORT PTD','Freight',
+'INTL OCEAN EXPORT DTP','Freight',
+'INTL OCEAN EXPORT PTP','Freight',
+'INTL OCEAN IMPORT PTP','Freight',
+'INTL OCEAN IMPORT PTD','Freight',
+'INTL OCEAN IMPORT DTP','Freight',
+'DOMESTIC OCEAN','Freight',
+'INTL OCEAN IMPORT DTD','Freight',
+'ONSITE','Warehouse/VAS',
+'OVERSTOCK','Freight',
+'PARTIAL TRUCKLOAD','Freight',
+'PHL TRUCKLOAD','Freight',
+'RETAIL 2 DAY','Freight',
+'RETAIL 3 DAY','Freight',
+'RETAIL ECONOMY (3-5 DAYS)','Freight',
+'RETAIL NEXT DAY','Freight',
+'SMALL PACKAGE (FX / UPS / DHL)','Freight',
+'STORAGE / WAREHOUSING','Warehouse/VAS',
+'TIME DEFINITE','Freight',
+'TRIUMPH','Freight',
+'VERIZON DISTRO','Freight',
+'CISCO CROSS DOCK','Warehouse/VAS',
+'DC BYPASS AIR','Freight'
+''
+)AS SHIPMENT_ACTIVITY,
+DECODE(SERVICE.SERVICELEVEL,
+'2 DAY AM SERVICE',	'Domestic',
+'2 DAY SERVICE',	'Domestic',
+'3 DAY AM SERVICE',	'Domestic',
+'3 DAY SERVICE',	'Domestic',
+'4 DAY SERVICE',	'Domestic',
+'INTL AIR EXPORT',	'International',
+'INTL AIR EXPORT DTD',	'International',
+'INTL AIR IMPORT',	'International',
+'BROKERAGE CLEARANCE',	'Customs Brokerage',
+'BRONZE',	'Domestic',
+'CISCO CANADA',	'International',
+'CHARTER',	'Domestic',
+'COMAT',	'Domestic',
+'DRIVER',	'Domestic',
+'ECONOMY (3-5 DAYS)',	'Domestic',
+'FULL TRUCKLOAD',	'Domestic',
+'GOODMAN LOCAL',	'Domestic',
+'GOLD',	'Domestic',
+'HOME DELIVERY',	'Domestic',
+'HOTSHOT',	'Domestic',
+'TRANSBORDER',	'International',
+'LOCAL PICK UP & DELIVERY',	'Domestic',
+'PHL LOCAL',	'Domestic',
+'LTL',	'Domestic',
+'NEXT DAY AM',	'Domestic',
+'NEXT DAY PM',	'Domestic',
+'NFO (DTA)',	'Domestic',
+'NFO (DTD)',	'Domestic',
+'INTL OCEAN EXPORT DTD',	'International',
+'INTL OCEAN EXPORT PTD',	'International',
+'INTL OCEAN EXPORT DTP',	'International',
+'INTL OCEAN EXPORT PTP',	'International',
+'INTL OCEAN IMPORT PTP',	'International',
+'INTL OCEAN IMPORT PTD',	'International',
+'INTL OCEAN IMPORT DTP',	'International',
+'DOMESTIC OCEAN',	'Domestic',
+'INTL OCEAN IMPORT DTD',	'International',
+'ONSITE',	'Warehouse/VAS',
+'OVERSTOCK',	'Domestic',
+'PARTIAL TRUCKLOAD',	'Domestic',
+'PHL TRUCKLOAD',	'Domestic',
+'RETAIL 2 DAY',	'Domestic',
+'RETAIL 3 DAY',	'Domestic',
+'RETAIL ECONOMY (3-5 DAYS)',	'Domestic',
+'RETAIL NEXT DAY',	'Domestic',
+'SMALL PACKAGE (FX / UPS / DHL)',	'Small Pack',
+'STORAGE / WAREHOUSING',	'Warehouse/VAS',
+'TIME DEFINITE',	'Domestic',
+'TRIUMPH',	'Domestic',
+'VERIZON DISTRO',	'Domestic',
+'CISCO CROSS DOCK',	'Warehouse/VAS',
+'DC BYPASS AIR',	'International',
+'') AS SHIPMENT_TYPE,
+DECODE(SERVICE.SERVICELEVEL,
+'2 DAY AM SERVICE',	'Expedited',
+'2 DAY SERVICE',	'Expedited',
+'3 DAY AM SERVICE',	'Expedited',
+'3 DAY SERVICE',	'Expedited',
+'4 DAY SERVICE',	'Standard',
+'INTL AIR EXPORT',	'Standard',
+'INTL AIR EXPORT DTD',	'Standard',
+'INTL AIR IMPORT',	'Standard',
+'BROKERAGE CLEARANCE',	'Customs Brokerage',
+'BRONZE',	'Standard',
+'CISCO CANADA',	'Standard',
+'CHARTER',	'Expedited',
+'COMAT',	'Standard',
+'DRIVER',	'Standard',
+'ECONOMY (3-5 DAYS)',	'Standard',
+'FULL TRUCKLOAD',	'Standard',
+'GOODMAN LOCAL',	'Standard',
+'GOLD',	'Standard',
+'HOME DELIVERY',	'Standard',
+'HOTSHOT',	'Expedited',
+'TRANSBORDER',	'Standard',
+'LOCAL PICK UP & DELIVERY',	'Standard',
+'PHL LOCAL',	'Standard',
+'LTL',	'Standard',
+'NEXT DAY AM',	'Expedited',
+'NEXT DAY PM',	'Expedited',
+'NFO (DTA)',	'Expedited',
+'NFO (DTD)',	'Expedited',
+'INTL OCEAN EXPORT DTD',	'Standard',
+'INTL OCEAN EXPORT PTD',	'Standard',
+'INTL OCEAN EXPORT DTP',	'Standard',
+'INTL OCEAN EXPORT PTP',	'Standard',
+'INTL OCEAN IMPORT PTP',	'Standard',
+'INTL OCEAN IMPORT PTD',	'Standard',
+'INTL OCEAN IMPORT DTP',	'Standard',
+'DOMESTIC OCEAN',	'Standard',
+'INTL OCEAN IMPORT DTD',	'Standard',
+'ONSITE',	'Warehouse/VAS',
+'OVERSTOCK',	'Standard',
+'PARTIAL TRUCKLOAD',	'Standard',
+'PHL TRUCKLOAD',	'Standard',
+'RETAIL 2 DAY',	'Expedited',
+'RETAIL 3 DAY',	'Expedited',
+'RETAIL ECONOMY (3-5 DAYS)',	'Standard',
+'RETAIL NEXT DAY',	'Expedited',
+'SMALL PACKAGE (FX / UPS / DHL)',	'Small Pack',
+'STORAGE / WAREHOUSING',	'Warehouse/VAS',
+'TIME DEFINITE',	'Standard',
+'TRIUMPH',	'Standard',
+'VERIZON DISTRO',	'Standard',
+'CISCO CROSS DOCK',	'Warehouse/VAS',
+'DC BYPASS AIR',	'Standard',
+'') AS SHIPMENT_SERVICE,
+
+DECODE(SERVICE.SERVICELEVEL,
+'2 DAY AM SERVICE',	'Air',
+'2 DAY SERVICE',	'Air',
+'3 DAY AM SERVICE',	'Air',
+'3 DAY SERVICE',	'Air',
+'4 DAY SERVICE',	'Ground',
+'INTL AIR EXPORT',	'Air',
+'INTL AIR EXPORT DTD',	'Air',
+'INTL AIR IMPORT',	'Air',
+'BROKERAGE CLEARANCE',	'Customs Brokerage',
+'BRONZE',	'Ground',
+'CISCO CANADA',	'Transborder',
+'CHARTER',	'Air',
+'COMAT',	'Ground',
+'DRIVER',	'Ground',
+'ECONOMY (3-5 DAYS)',	'Ground',
+'FULL TRUCKLOAD',	'Ground',
+'GOODMAN LOCAL',	'Ground',
+'GOLD',	'Ground',
+'HOME DELIVERY',	'Ground',
+'HOTSHOT',	'Ground',
+'TRANSBORDER',	'Transborder',
+'LOCAL PICK UP & DELIVERY',	'Ground',
+'PHL LOCAL',	'Ground',
+'LTL',	'Ground',
+'NEXT DAY AM',	'Air',
+'NEXT DAY PM',	'Air',
+'NFO (DTA)',	'Air',
+'NFO (DTD)',	'Air',
+'INTL OCEAN EXPORT DTD',	'Ocean',
+'INTL OCEAN EXPORT PTD',	'Ocean',
+'INTL OCEAN EXPORT DTP',	'Ocean',
+'INTL OCEAN EXPORT PTP',	'Ocean',
+'INTL OCEAN IMPORT PTP',	'Ocean',
+'INTL OCEAN IMPORT PTD',	'Ocean',
+'INTL OCEAN IMPORT DTP',	'Ocean',
+'DOMESTIC OCEAN',	'Ocean',
+'INTL OCEAN IMPORT DTD',	'Ocean',
+'ONSITE',	'Warehouse/VAS',
+'OVERSTOCK',	'Ground',
+'PARTIAL TRUCKLOAD',	'Ground',
+'PHL TRUCKLOAD',	'Ground',
+'RETAIL 2 DAY',	'Air',
+'RETAIL 3 DAY',	'Air',
+'RETAIL ECONOMY (3-5 DAYS)',	'Ground',
+'RETAIL NEXT DAY',	'Air',
+'SMALL PACKAGE (FX / UPS / DHL)',	'Small Pack',
+'STORAGE / WAREHOUSING',	'Warehouse/VAS',
+'TIME DEFINITE',	'Air',
+'TRIUMPH',	'Ground',
+'VERIZON DISTRO',	'Ground',
+'CISCO CROSS DOCK',	'Warehouse/VAS',
+'DC BYPASS AIR',	'Air',
+'') as shipment_mode,
+
+CASE 
+WHEN SERVICE.SERVICELEVEL ='2 DAY AM SERVICE' THEN 'Air'
+when SERVICE.SERVICELEVEL ='2 DAY SERVICE' THEN 'Air'
+when SERVICE.SERVICELEVEL ='3 DAY AM SERVICE' THEN 'Air'
+when SERVICE.SERVICELEVEL ='3 DAY SERVICE' THEN 'Air'
+when SERVICE.SERVICELEVEL ='4 DAY SERVICE' then  coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='INTL AIR EXPORT' then 'Air'
+when SERVICE.SERVICELEVEL ='INTL AIR EXPORT DTD' then 'Air'
+when SERVICE.SERVICELEVEL ='INTL AIR IMPORT' then 'Air'
+when SERVICE.SERVICELEVEL ='BROKERAGE CLEARANCE' then 'Customs Brokerage'
+when SERVICE.SERVICELEVEL ='BRONZE' then coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='CISCO CANADA' then 'Transborder'
+when SERVICE.SERVICELEVEL ='CHARTER' then 'Air'
+when SERVICE.SERVICELEVEL ='COMAT' then 'LTL'
+when SERVICE.SERVICELEVEL ='DRIVER' then 'LTL'
+when SERVICE.SERVICELEVEL ='ECONOMY (3-5 DAYS)' then coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='FULL TRUCKLOAD' then 'FTL'
+when SERVICE.SERVICELEVEL ='GOODMAN LOCAL' then 'Local Pickup & Delivery'
+when SERVICE.SERVICELEVEL ='GOLD' then coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='HOME DELIVERY' then coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='HOTSHOT' then 'LTL'
+when SERVICE.SERVICELEVEL ='TRANSBORDER' then 'Transborder'
+when SERVICE.SERVICELEVEL ='LOCAL PICK UP & DELIVERY' then 'Local Pickup & Delivery'
+when SERVICE.SERVICELEVEL ='PHL LOCAL' then 'Local Pickup & Delivery'
+when SERVICE.SERVICELEVEL ='LTL' then 'LTL'
+when SERVICE.SERVICELEVEL ='NEXT DAY AM' then 'Air'
+when SERVICE.SERVICELEVEL ='NEXT DAY PM'then 'Air'
+when SERVICE.SERVICELEVEL ='NFO (DTA)'then 'Air'
+when SERVICE.SERVICELEVEL ='NFO (DTD)'then 'Air'
+when SERVICE.SERVICELEVEL ='INTL OCEAN EXPORT DTD' then a.fcl_lcl
+when SERVICE.SERVICELEVEL ='INTL OCEAN EXPORT PTD' then a.fcl_lcl
+when SERVICE.SERVICELEVEL ='INTL OCEAN EXPORT DTP' then a.fcl_lcl
+when SERVICE.SERVICELEVEL ='INTL OCEAN EXPORT PTP' then a.fcl_lcl
+when SERVICE.SERVICELEVEL ='INTL OCEAN IMPORT PTP' then a.fcl_lcl
+when SERVICE.SERVICELEVEL ='INTL OCEAN IMPORT PTD' then a.fcl_lcl
+when SERVICE.SERVICELEVEL ='INTL OCEAN IMPORT DTP' then a.fcl_lcl
+when SERVICE.SERVICELEVEL ='DOMESTIC OCEAN' then a.fcl_lcl
+when SERVICE.SERVICELEVEL ='INTL OCEAN IMPORT DTD' then a.fcl_lcl
+when SERVICE.SERVICELEVEL ='ONSITE' then 'Warehouse/VAS'
+when SERVICE.SERVICELEVEL ='OVERSTOCK' then coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='PARTIAL TRUCKLOAD' then coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='PHL TRUCKLOAD' then 'FTL'
+when SERVICE.SERVICELEVEL ='RETAIL 2 DAY' then 'Air'
+when SERVICE.SERVICELEVEL ='RETAIL 3 DAY' then 'Air'
+when SERVICE.SERVICELEVEL ='RETAIL ECONOMY (3-5 DAYS)' then coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='RETAIL NEXT DAY' then 'Air'
+when SERVICE.SERVICELEVEL ='SMALL PACKAGE (FX / UPS / DHL)' then 'Small Pack'
+when SERVICE.SERVICELEVEL ='STORAGE / WAREHOUSING' then 'Warehouse/VAS'
+when SERVICE.SERVICELEVEL ='TIME DEFINITE' then 'Air'
+when SERVICE.SERVICELEVEL ='TRIUMPH' then coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='VERIZON DISTRO' then coalesce(md1.modedetail,md2.modedetail)
+when SERVICE.SERVICELEVEL ='CISCO CROSS DOCK' then 'Warehouse/VAS'
+when SERVICE.SERVICELEVEL ='DC BYPASS AIR' then 'Air'
+end  as  shipment_mode_detl,
+decode(fk_modeid,'AIRIMPORT', 'Air Import','DOMAIR', 'Domair', 'AIREXPORT', 'Air Export', 
+'TRUCKLOAD', 'Truck Load','OCEANEXPORT','Ocean Export','OCEANIMPORT', 'Ocean Import',fk_modeid) AS ModeId,
+
+A.FK_OrderStatusId AS CURRENT_STATUS,
+A.Housebill AS INVOICE_NUMBER,
+case when cast(A.InvoiceDateTime as date ) = '1900-01-01' then null else A.InvoiceDateTime end AS INVOICE_DATE,
+A.BILLNO AS BILL_TO_NBR,
+A.FK_ControlCustomerNo AS CNTRL_CUST_NBR,
+charges."TOTAL CHARGES" AS TOT_CHARGES,
+charges."TOTAL COSTS" AS TOT_COSTS,
+charges.PROFIT AS PROFIT,
+SALES.DESCRIPTION AS SALES_PERSON,
+A.AcctManager AS ACCNT_MANAGER,
+A.SHIPQUOTE AS SHIPMENT_QUOTE,
+reftype.fk_reftypeid as Non_Revenue,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+FROM dbc.tbl_ShipmentHeader A 
+LEFT OUTER JOIN
+(SELECT
+FK_ORDERNO, listagg(distinct description,',') AS DESCRIPTION, SUM(PIECES) AS PIECES,SUM(WEIGHT)WEIGHTLBS,SUM(WEIGHTKILO)WEIGHTKGS,
+SUM(CHARGABLEWEIGHT)AS CHARGABLEWEIGHTLBS,
+SUM(CHARGABLEWEIGHTKILO)AS CHARGABLEWEIGHTKGS,
+SUM(CUBICFEET) AS CUBIC_FEET,
+SUM(CUBICMETERS) AS CUBIC_METERS
+FROM dbc.tbl_ShipmentDesc
+GROUP BY FK_ORDERNO 
+)B
+ON A.PK_OrderNo = B.FK_OrderNo
+LEFT OUTER JOIN
+(SELECT FK_ORDERNO,
+SUM(CASE WHEN CHARGES.APARCODE = 'C' THEN TOTAL ELSE 0 END) AS "TOTAL CHARGES",
+SUM(CASE WHEN CHARGES.APARCODE = 'V'
+THEN (case when charges.FINALIZEDTOTAL <= 0 then TOTAL else finalizedtotal end)  else 0 end )"TOTAL COSTS",
+SUM(CASE WHEN CHARGES.APARCODE = 'C' THEN TOTAL ELSE 0 END) -
+SUM(CASE WHEN CHARGES.APARCODE = 'V'
+THEN (case when charges.FINALIZEDTOTAL <= 0 then TOTAL else finalizedtotal end)  else 0 end )
+AS "PROFIT"
+FROM
+dbc.tbl_ShipmentAPAR CHARGES
+GROUP BY CHARGES.FK_ORDERNO
+)CHARGES
+ON A.PK_OrderNo = CHARGES.FK_OrderNo
+left outer join dbc.tbl_ServiceLevels service
+on a.FK_ServiceLevelId = service.PK_ServiceLevelId
+left outer join dbc.tbl_Shipper shipper
+on a.PK_OrderNo = shipper.FK_ShipOrderNo
+left outer join dbc.tbl_Consignee consignee
+on a.PK_OrderNo = consignee.FK_ConOrderNo
+LEFT OUTER JOIN 
+(SELECT FK_ORDERNO,EVENTDATETIME FROM DBC.TBL_SHIPMENTMILESTONE
+WHERE FK_ORDERSTATUSID = 'DEL')MD
+ON A.PK_ORDERNO = MD.FK_ORDERNO
+LEFT OUTER JOIN 
+(SELECT FK_ORDERNO,EVENTDATETIME FROM DBC.TBL_SHIPMENTMILESTONE 
+WHERE FK_ORDERSTATUSID = 'PUP')MP
+ON A.PK_ORDERNO = MP.FK_ORDERNO
+left outer join 
+(
+select
+a.fk_orderno,listaGG(refno,',') AS MAWB
+from dbc.tbl_shipmentapar a join
+dbc.tbl_vendorservices b
+on a.fk_Serviceid = b.pk_Serviceid
+where b.expansioncode in ('AIR','AALHL','LTLCA')
+GROUP BY A.FK_ORDERNO
+)MAWB
+on a.pk_orderno = mawb.fk_orderno
+LEFT OUTER JOIN DBc.TBL_SALESPERSON SALES
+ON A.FK_Salesperson = SALES.PK_SalespersonID
+left outer join 
+(select distinct fk_orderno , fk_Serviceid ,'FTL' modedetail from dbc.tbl_shipmentapar where aparcode  = 'V' and fk_Serviceid in ('MT','TL'))md1
+on a.pk_orderno = md1.fk_orderno
+left outer join 
+(select distinct fk_orderno , fk_Serviceid , 'LTL' modedetail from dbc.tbl_shipmentapar where aparcode  = 'V'and fk_Serviceid not in ('MT','TL'))md2
+on a.pk_orderno = md2.fk_orderno
+left outer join 
+(select fk_orderno, fk_reftypeid  from dbc.tbl_references tr where fk_reftypeid = 'NRS')reftype
+on a.pk_orderno = reftype.fk_orderno
+where a.orderdate >= '2017-12-30'
+$$
+)
+TO 's3://dw-datapipeline-prod/Data/shipment_info/wt_shipments/'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint' 
+ALLOWOVERWRITE

@@ -1,0 +1,80 @@
+truncate table public.shipment_info_stage;
+
+copy shipment_info_stage from 's3://dw-datapipeline-prod/Data/shipment_info/wt_shipments/' 
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+update shipment_info set 
+file_date=s.file_date,
+handling_stn=s.handling_stn,
+controlling_stn=s.controlling_stn,
+revenue_stn=s.revenue_stn,
+rev_recognition_date=s.rev_recognition_date,
+master_bill_nbr=s.master_bill_nbr,
+house_bill_nbr=s.house_bill_nbr,
+pickup_zone=s.pickup_zone,
+origin_port_iata=s.origin_port_iata,
+destination_port_iata=s.destination_port_iata,
+trade_lane=s.trade_lane,
+delivery_zone=s.delivery_zone,
+shipper_name=s.shipper_name,
+shipper_addr_1=s.shipper_addr_1,
+shipper_addr_2=s.shipper_addr_2,
+shipper_city=s.shipper_city,
+shipper_st=s.shipper_st,
+shipper_cntry=s.shipper_cntry,
+shipper_zip=s.shipper_zip,
+consignee_name=s.consignee_name,
+consignee_addr_1=s.consignee_addr_1,
+consignee_addr_2=s.consignee_addr_2,
+consignee_city=s.consignee_city,
+consignee_st=s.consignee_st,
+consignee_cntry=s.consignee_cntry,
+consignee_zip=s.consignee_zip,
+description = s.description,
+pieces=s.pieces,
+actual_wght_lbs=s.actual_wght_lbs,
+actual_wght_kgs=s.actual_wght_kgs,
+chrg_wght_lbs=s.chrg_wght_lbs,
+chrg_wght_kgs=s.chrg_wght_kgs,
+cubic_feet = s.cubic_feet,
+cubic_meters = s.cubic_meters,
+pickup_date=s.pickup_date,
+pod_date=s.pod_date,
+eta_date = s.eta_date,
+etd_date = s.etd_date,
+schd_Delv_Date = s.schd_Delv_Date,
+service_level=s.service_level,
+shipment_activity = s.shipment_activity,
+shipment_type = s.shipment_type,
+shipment_service = s.shipment_service,
+shipment_mode = s.shipment_mode,
+shipment_mode_detl = s.shipment_mode_Detl,
+modeid=s.modeid,
+current_status=s.current_status,
+invoice_number=s.invoice_number,
+invoice_date=s.invoice_date,
+bill_to_nbr=s.bill_to_nbr,
+cntrl_cust_nbr=s.cntrl_cust_nbr,
+tot_charges=s.tot_charges,
+tot_costs=s.tot_costs,
+profit=s.profit,
+sales_person=s.sales_person,
+accnt_manager=s.accnt_manager,
+shipment_quote=s.shipment_quote,
+Non_Revenue =s.Non_Revenue,
+load_update_date=s.load_create_date 
+from shipment_info_stage s 
+where 
+(
+	shipment_info.source_system=s.source_system 
+	and shipment_info.file_nbr=s.file_nbr
+);
+
+delete from shipment_info_stage using shipment_info t 
+where 
+(
+	shipment_info_stage.source_system=t.source_system 
+	and shipment_info_stage.file_nbr=t.file_nbr
+);
+
+insert into shipment_info select * from shipment_info_stage;

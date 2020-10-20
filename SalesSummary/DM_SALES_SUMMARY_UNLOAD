@@ -1,0 +1,88 @@
+UNLOAD(
+$$
+select 
+main.source_system,
+"Year",
+"Month",
+trim(main.bill_to_nbr) bill_to_nbr,
+bill.name bill_to_cust,
+trim(main.cntrl_cust_nbr)cntrl_cust_nbr,
+cntrl.name cntrl_cust,
+bill.sales_rep ,
+bill.account_mgr ,
+coalesce(nullif(bill.sales_rep ,''),bill.account_mgr) as owner,
+nvl(total_charge,0) as total_charge,
+nvl(total_cost,0) as total_cost,
+nvl(total_charge,0) - nvl(total_cost,0) as Profit,
+convert_timezone('CDT', sysdate) AS LOAD_CREATE_DATE,
+cast(NULL as DATE) AS LOAD_UPADTE_DATE
+from 
+(select 
+z.source_system,
+"year",
+"month",
+z.bill_to_nbr,
+z.cntrl_cust_nbr,
+sum(total_cost)total_cost,
+sum(total_charge)total_charge
+
+from 
+(select 
+a.source_system,
+extract (year from case when a.source_system = 'WT' then coalesce(a.rev_recognition_date , file_date) else b.invoice_date end) "year", 
+extract (month from case when a.source_system = 'WT' then coalesce(a.rev_recognition_date , file_date) else b.invoice_date end) "month", 
+b.bill_to_nbr,
+b.cntrl_cust_nbr,
+sum(b.total)as total_charge,
+0 as total_cost
+from 
+shipment_info a
+left outer join
+ar_invoice_receivables b
+on a.source_system = b.source_system 
+and a.file_nbr = b.file_nbr 
+where shipment_quote in ('S','I')
+and current_Status <> 'CAN'
+group by a.source_system ,b.bill_to_nbr,b.cntrl_cust_nbr,
+extract (year from case when a.source_system = 'WT' then coalesce(a.rev_recognition_date , file_date) else b.invoice_date end), 
+extract (month from case when a.source_system = 'WT' then coalesce(a.rev_recognition_date , file_date) else b.invoice_date end) 
+ 
+
+UNION 
+
+select 
+a.source_system,
+extract (year from case when a.source_system = 'WT' then coalesce(a.rev_recognition_date , file_date) else b.invoice_date end) "year", 
+extract (month from case when a.source_system = 'WT' then coalesce(a.rev_recognition_date , file_date) else b.invoice_date end) "month", 
+b.bill_to_nbr,
+b.cntrl_cust_nbr,
+0,
+sum(b.total)as total_cost
+from 
+shipment_info a
+left outer join
+ap_invoice_payments b
+on a.source_system = b.source_system 
+and a.file_nbr = b.file_nbr 
+where shipment_quote in ('S','I')
+and current_Status <> 'CAN'
+group by a.source_system ,b.bill_to_nbr,b.cntrl_cust_nbr,
+extract (year from case when a.source_system = 'WT' then coalesce(a.rev_recognition_date , file_date) else b.invoice_date end) , 
+extract (month from case when a.source_system = 'WT' then coalesce(a.rev_recognition_date , file_date) else b.invoice_date end) 
+)Z
+group by z.source_system,z.bill_to_nbr,z.cntrl_cust_nbr,z."year",z."month"
+)main
+left outer join 
+customers bill
+on main.source_system = bill.source_system 
+and trim(main.bill_to_nbr) = trim(bill.nbr)
+left outer join 
+customers cntrl
+on main.source_system = cntrl.source_system 
+and trim(main.cntrl_cust_nbr) = trim(cntrl.nbr)
+where (bill.billto_only = 'Y' or cntrl.controlling_only = 'Y')
+$$
+)
+TO 's3://dw-datapipeline-prod/Data/sales_summary/'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint' 
+ALLOWOVERWRITE

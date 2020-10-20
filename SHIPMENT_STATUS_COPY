@@ -1,0 +1,4 @@
+truncate table public.shipment_status;
+
+COPY shipment_status FROM 's3://dw-datapipeline-prod/Data/shipment_status_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+

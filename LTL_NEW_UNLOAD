@@ -1,0 +1,85 @@
+unload(
+'
+select 
+FILE_NBR,
+FILE_DATE,
+HANDLING_STN,
+CONTROLLING_STN,
+HOUSE_BILL_NBR,
+reference_nbr,
+SHIPPER_NAME,
+CONSIGNEE_NAME,
+status,
+X12_STATUS,
+Status_Desc,
+case 
+when status = ''NEW'' then ''Shipment Acknowledged''
+when status = ''ST'' then ''Trailer Spotted at Consignee Location''
+when status = ''DIS'' then ''Pick Up Dispatched''
+when status = ''PUP'' then ''Picked Up''
+when status = ''TTC'' then ''TTC/Loaded''
+when status = ''COB'' then ''COB/InTransit''
+when status = ''COH'' then ''Arrived At Destination''
+when status = ''AAD'' then ''Out For Delivery''
+when status = ''DEL'' then ''Delivered''
+else Status_Desc
+end X12_STATUS_DESC,
+Event_Date,
+BILL_TO_NBR,
+pod,
+pod_Date,
+message_sent,
+LOAD_CREATE_DATE,
+LOAD_UPADTE_DATE
+from 
+
+(SELECT DISTINCT
+A.PK_ORDERNO AS FILE_NBR,
+cast(A.OrderDate as date) AS FILE_DATE,
+A.handlingstation AS HANDLING_STN,
+A.CONTROLLINGSTATION AS CONTROLLING_STN,
+housebill AS HOUSE_BILL_NBR,
+ref1.referenceno as reference_nbr,
+translate(shipper.shipname,''|'','''') as SHIPPER_NAME,
+translate(consignee.conname,''|'','''') AS CONSIGNEE_NAME,
+m.fk_orderstatusid as status,
+decode(M.fk_orderstatusid , ''NEW'',''XB'',''ST'',''S1'',''DIS'',''X3'',''PUP'',''AF'',''TTC'',''AF'',''COB'',''AF'',''COH'',''AF'',''AAD'',''X2'',''DEL'',''D1'',M.fk_orderstatusid)X12_STATUS,
+m.status as Status_Desc,
+m.eventdatetime as Event_Date,
+A.BILLNO AS BILL_TO_NBR,
+case when (CASE WHEN cast(a.poddatetime as date) = ''1900-01-01'' then null else a.poddatetime end ) IS NULL THEN ''False'' ELSE ''True'' END AS pod,
+case when cast(a.poddatetime as date) = ''1900-01-01'' then null else poddatetime end as pod_Date,
+''''message_sent,
+convert_timezone(''CDT'', sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+FROM dbc.tbl_ShipmentHeader A
+left outer join dbc.tbl_Shipper shipper
+on a.PK_OrderNo = shipper.FK_ShipOrderNo
+left outer join dbc.tbl_Consignee consignee
+on a.PK_OrderNo = consignee.FK_ConOrderNo
+left outer join 
+(select m.fk_orderno ,m.fk_orderstatusid ,m.eventdatetime ,s.status 
+from 
+dbc.tbl_shipmentmilestone m
+left outer join 
+DBC.tbl_Statuses s
+on m.fk_orderstatusid  = s.pk_orderstatusid 
+where m.fk_orderstatusid IN (''NEW'',''ST'',''DIS'',''PUP'',''TTC'',''COB'',''COH'',''AAD'',''DEL'')  
+--not in (''PUO'',''PUC'',''PUA'',''VER'',''RAS'',''DAD'',''REC'',''OFD'',''DPU'',''APD'',''OOH'')
+)m
+on a.pk_orderno = m.fk_orderno 
+left outer join 
+(select * from dbc.tbl_references where fk_reftypeid = ''REF'')ref1
+on a.pk_orderno  = ref1.fk_orderno
+where 
+A.BILLNO in (''9572'',''9571'',''9570'')
+AND A.PK_ORDERNO NOT IN (select DISTINCT fk_orderno from dbc.tbl_shipmentmilestone ts where fk_orderstatusid in (''CAN'',''HOL''))
+and regexp_instr(ref1.referenceno ,''[aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ]'') = 0
+and A.FK_OrderStatusId not in (''CAN'',''HOL'')
+)main
+ORDER BY FILE_NBR,Event_Date
+')
+TO 's3://dw-datapipeline-prod/Data/ltl_new_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint' 
+Parallel OFF
+ALLOWOVERWRITE

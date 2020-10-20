@@ -1,0 +1,59 @@
+UNLOAD(
+'
+select distinct 
+a.source_system ,
+a.file_nbr ,
+a.file_date ,
+a.handling_stn , 
+a.master_bill_nbr , 
+a.house_bill_nbr, 
+a.origin_port_iata , 
+a.destination_port_iata ,
+a.shipper_name ,
+a.consignee_name ,
+a.pieces , 
+a.actual_wght_lbs ,
+a.actual_wght_kgs ,
+a.chrg_wght_lbs ,
+a.chrg_wght_kgs , 
+a.pickup_date ,
+a.pod_date ,
+a.eta_date ,
+a.etd_date ,
+a.schd_delv_date , 
+a.shipment_mode ,
+a.service_level ,
+case when a.source_system = ''WT'' then m.order_status else a.current_status end as order_status,
+case when a.source_system = ''WT'' then m.order_Status_Desc else a.current_status end as order_status_desc,
+customersb.name bill_to_customer, 
+customersc.name controlling_customer ,
+convert_timezone(''CDT'', sysdate) AS "LOAD CREATE DATE",
+CAST(NULL AS timestamp) AS "LOAD UPADTE DATE"
+from public.shipment_info a
+left outer join public.customers customersb 
+on  a.source_system = customersb.source_system 
+and trim(a.bill_to_nbr) = trim(customersb.nbr) 
+left outer join public.customers customersc 
+on a.source_system = customersc.source_system 
+and trim(a.cntrl_cust_nbr) = trim(customersc.nbr)
+left outer join
+(
+select m1.source_system ,m1.file_nbr ,m1.order_status ,m1.order_status_desc 
+from shipment_milestone m1 
+join 
+(select file_nbr ,max(event_seq_nbr)event_seq_nbr  from shipment_milestone where is_public = ''Y'' group by file_nbr
+)b 
+on m1.file_nbr = b.file_nbr 
+and m1.event_seq_nbr = b.event_seq_nbr 
+and m1.is_public  = ''Y''
+)m 
+on a.source_system = m.source_system 
+and a.file_nbr = m.file_nbr 
+where  shipment_quote IN (''S'')
+AND current_status <> ''CAN''
+'
+)
+TO 's3://dw-datapipeline-prod/Data/api_shipment_info_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

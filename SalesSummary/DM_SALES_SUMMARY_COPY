@@ -1,0 +1,54 @@
+truncate table datamart.sales_summary_stage;
+
+copy datamart.sales_summary_stage 
+from 's3://dw-datapipeline-prod/Data/sales_summary/' 
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+update  datamart.sales_summary  set 
+"sales rep" = s."sales rep",
+"account manager" = s."account manager",
+"owner" = s."owner",
+"total charge" = s."total charge",
+"total cost" = s."total cost",
+profit = s.profit,
+load_update_date = convert_timezone('CDT', sysdate)
+from  datamart.sales_summary_stage s
+where
+(
+datamart.sales_summary."source system" = s."source system"
+and  datamart.sales_summary."bill to number" = s."bill to number"
+and  datamart.sales_summary."bill to customer" = s."bill to customer" 
+and  datamart.sales_summary."year" = s."year"
+and  datamart.sales_summary."month" = s."month"
+and  datamart.sales_summary."cntrolling customer number" = s."cntrolling customer number"
+and  datamart.sales_summary."cntrolling customer" = s."cntrolling customer"
+and 
+(
+datamart.sales_summary."sales rep" <> s."sales rep"
+or 
+datamart.sales_summary."account manager" <> s."account manager"
+or 
+datamart.sales_summary."owner" <> s."owner"
+or 
+datamart.sales_summary."total charge" <> s."total charge"
+or 
+datamart.sales_summary."total cost" <> s."total cost"
+or 
+datamart.sales_summary.profit <> s.profit
+)
+);
+
+
+delete from datamart.sales_summary_stage using  datamart.sales_summary t
+where
+(
+datamart.sales_summary_stage."source system" = t."source system"
+and datamart.sales_summary_stage."bill to number" = t."bill to number"
+and datamart.sales_summary_stage."bill to customer" = t."bill to customer" 
+and datamart.sales_summary_stage."year" = t."year"
+and datamart.sales_summary_stage."month" = t."month"
+and datamart.sales_summary_stage."cntrolling customer number" = t."cntrolling customer number"
+and datamart.sales_summary_stage."cntrolling customer" = t."cntrolling customer"
+);
+
+insert into  datamart.sales_summary select * from datamart.sales_summary_stage;

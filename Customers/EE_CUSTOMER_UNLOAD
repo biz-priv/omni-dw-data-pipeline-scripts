@@ -1,0 +1,45 @@
+unload
+(
+$$
+SELECT 
+distinct
+'EE' AS SOURCE_SYSTEM,
+trim(A.ACCTNO) AS NBR,
+translate(A.NAME,'|','') as NAME,
+sales as sales_rep,
+sales2 as account_mgr,
+coalesce(nullif(sales,''),sales2) as owner,
+translate(A.ADDR1,'|','') as ADDR1,
+translate(A.ADDR2,'|','') as ADDR2,
+A.CITY AS CITY,
+A.STATEPROV AS STATE,
+B.COUNTRY AS COUNTRY,
+A.POSTCODE AS ZIP,
+'' as cust_contact,
+'' as email,
+'' as ap_email,  
+case when a.acctno = c.acctno then 'Y' else '' end as billto_only,
+case when a.acctno = c.acctno then 'Y' else '' end as controlling_only,
+'' as bill_to_nbr,
+'' as controlling_nbr,
+'' as Station,
+convert_timezone('CDT',sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+FROM
+expert32.CUSTOMER A
+left outer JOIN expert32.AIRPORT B
+ON A.AIRPORT = B.CODE
+left outer join 
+(
+select distinct b.acctno
+from expert32.xrefacct a join expert32.customer b 
+on a.ouracct = b.acctno 
+and a.theiracct = b.acctno 
+where them like ('\#BILL%')
+)c
+on a.acctno = c.acctno
+$$
+)
+TO 's3://dw-datapipeline-prod/Data/Customers/ee_customers/'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+ALLOWOVERWRITE

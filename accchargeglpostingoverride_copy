@@ -1,0 +1,4 @@
+truncate table cw.accchargeglpostingoverride;
+
+COPY cw.accchargeglpostingoverride FROM 's3://dw-datapipeline-prod/Data/accchargeglpostingoverride_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
