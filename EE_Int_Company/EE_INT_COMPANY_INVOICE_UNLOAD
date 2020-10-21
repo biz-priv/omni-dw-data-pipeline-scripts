@@ -1,0 +1,74 @@
+UNLOAD(
+'
+select 
+Source_System,
+Vendor_Name,
+Vendor_nbr,
+Invoice_Stn,
+Invoice_Date,
+FILE_NBR,
+House_Bill_Nbr,
+sum(charge)charge,
+convert_timezone(''CDT'', sysdate) AS "LOAD CREATE DATE",
+convert_timezone(''CDT'', sysdate) AS "LOAD UPADTE DATE"
+from
+(select
+''EE'' as Source_System,
+Vendor_Name,
+Vendor_nbr,
+Invoice_Stn,
+Invoice_Date,
+COALESCE(B.file_nbr,Z.Invoice_nbr)AS FILE_NBR,
+b.hawb as House_Bill_Nbr,
+charge
+from
+(select distinct
+a.fileno as Invoice_nbr,
+a.ledate as INvoice_Date,
+a.origin as Invoice_Stn,
+cust.name as Vendor_Name,
+cust.acctno as Vendor_Nbr,
+sum(cast(b.charge as decimal(10,2)))  charge
+from expert32.invoice a
+left outer join expert32.invitem b
+on a.fileno = b.fileno
+join expert32.customer cust
+on b.acctno = cust.acctno
+where cast(a.ledate as date) >= ''2019-12-30''
+and trim(b.ACCTNO) in (''25217'',''25295'',''25299'',''25209'',''25216'',''25213'',''25212'',''25206'',''25222'',
+''25204'',''25211'',''25218'',''25210'',''25215'',''25297'',''25207'',''25219'',''25300'',''25203'',''25202'',''25221'',''25220'',''25205'',''26281'',''26282'',''26283'')
+group by
+a.fileno,
+a.ledate,
+a.origin,
+cust.name,
+cust.acctno
+)z
+left outer join
+(
+select a.fileno invoice, a.origfileno file_nbr, b.hawb from expert32.addbill a
+join expert32.awb b
+on a.origfileno = b.fileno
+UNION
+SELECT
+A.FILENO,I.FILENO,a.hawb FROM
+expert32.AWB A
+LEFT OUTER JOIN
+expert32.INVOICE I
+ON A.FILENO = I.FILENO
+)b
+on z.Invoice_nbr = b.invoice
+)main
+group by 
+Source_System,
+Vendor_Name,
+Vendor_nbr,
+Invoice_Stn,
+Invoice_Date,
+FILE_NBR,
+House_Bill_Nbr
+')
+TO 's3://dw-datapipeline-prod/Data/ee_int_company_invoice_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

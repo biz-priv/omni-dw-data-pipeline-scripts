@@ -1,0 +1,13 @@
+unload(
+'
+select 
+distinct 
+pk_orderstatusid ,
+status,
+convert_timezone(''CDT'', sysdate) AS LOAD_CREATE_DATE
+from dbc.tbl_statuses
+')
+TO 's3://dw-datapipeline-prod/Data/shipment_status_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

@@ -1,0 +1,21 @@
+truncate table public.vendors_Stage;
+
+COPY vendors_stage FROM 's3://dw-datapipeline-prod/Data/wt_vendors_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+update vendors set 
+vendor_id = s.vendor_id,
+name = s.name,
+addr1 = s.addr1,
+addr2 = s.addr2,
+city = s.city,
+state = s.state,
+country = s.country,
+zip = s.zip,
+phone = s.phone,
+load_update_date=s.load_create_date 
+
+from vendors_stage s where (vendors.source_system=s.source_system and vendors.vendor_id=s.vendor_id);
+
+delete from vendors_stage using vendors t where (vendors_Stage.source_system=t.source_system and vendors_Stage.vendor_id=t.vendor_id);
+
+insert into vendors select * from vendors_Stage;

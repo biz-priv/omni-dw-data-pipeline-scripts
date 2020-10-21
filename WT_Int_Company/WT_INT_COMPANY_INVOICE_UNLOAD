@@ -1,0 +1,72 @@
+UNLOAD(
+'
+SELECT 
+Source_System,
+Vendor_Name,
+Vendor_Nbr,
+Invoice_Station,
+Invoice_Date,
+file_nbr,
+House_Bill_Nbr,
+sum(EST_COST)EST_COST,
+convert_timezone(''CDT'', sysdate) AS "LOAD CREATE DATE",
+convert_timezone(''CDT'', sysdate) AS "LOAD UPADTE DATE"
+from
+(select
+''WT'' Source_System,
+vendor.VendorName as Vendor_Name,
+apar.FK_VendorId as Vendor_Nbr,
+A.handlingstation AS Invoice_Station,
+A.ReadyDateTime as Invoice_Date,
+a.pk_orderno as file_nbr,
+housebill AS House_Bill_Nbr,
+case when finalize =''N'' then apar.Total else 0 end as EST_COST
+from dbc.tbl_Vendors vendor
+join
+dbc.tbl_ShipmentAPAR apar
+on apar.FK_VendorId = vendor.vendorid
+join dbc.tbl_vendorvg vorg
+on vendor.pk_vendorno  = vorg.fk_vendorno
+join dbc.tbl_ShipmentHeader A
+on a.PK_OrderNo = apar.FK_OrderNo
+JOIN
+(SELECT FK_ORDERNO,
+SUM(CASE WHEN CHARGES.APARCODE = ''C'' THEN TOTAL ELSE 0 END) AS "TOTAL CHARGES",
+SUM(CASE WHEN CHARGES.APARCODE = ''V''
+THEN (case when charges.FINALIZEDTOTAL <= 0 then TOTAL else finalizedtotal end)  else 0 end )"TOTAL COSTS",
+SUM(CASE WHEN CHARGES.APARCODE = ''C'' THEN TOTAL ELSE 0 END) -
+SUM(CASE WHEN CHARGES.APARCODE = ''V''
+THEN (case when charges.FINALIZEDTOTAL <= 0 then TOTAL else finalizedtotal end)  else 0 end )
+AS "PROFIT"
+FROM
+dbc.tbl_ShipmentAPAR CHARGES
+GROUP BY CHARGES.FK_ORDERNO
+)CHARGES
+ON A.PK_OrderNo = CHARGES.FK_OrderNo
+left outer JOIN
+(SELECT
+FK_ORDERNO, SUM(PIECES) AS PIECES,SUM(WEIGHT)WEIGHTLBS,SUM(WEIGHTKILO)WEIGHTKGS,
+SUM(CHARGABLEWEIGHT)AS CHARGABLEWEIGHTLBS,
+SUM(CHARGABLEWEIGHTKILO)AS CHARGABLEWEIGHTKGS
+FROM dbc.tbl_ShipmentDesc
+GROUP BY FK_ORDERNO
+)B
+ON A.PK_OrderNo = B.FK_OrderNo
+where
+vorg.fk_groupname  = ''INTERCO''
+and cast(A.ReadyDateTime  as date) >= ''2019-12-30''
+AND A.shipquote = ''S''
+)main
+group by 
+Source_System,
+Vendor_Name,
+Vendor_Nbr,
+Invoice_Station,
+Invoice_Date,
+file_nbr,
+House_Bill_Nbr
+')
+TO 's3://dw-datapipeline-prod/Data/wt_int_company_invoice_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

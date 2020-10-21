@@ -1,0 +1,145 @@
+UNLOAD(
+'
+select 
+"source system",
+"file number",
+"invoice number",
+"vendor id",
+"vendor name",
+"service id",
+"vendor invoice number",
+"invoice sequence number",
+"revenue station",
+"revenue location",
+"revenue region",
+"controlling station",
+"controlling location",
+"controlling region",
+"bill to number",
+"Bill to Customer",
+"control customer number",
+"Controlling Customer",
+"sales rep",
+"account manager",
+"consol number",
+"charge code",
+"invoice date",
+"finalized_date",
+"vendor complete date",
+"finalized by",
+"updated by",
+"approved rejected date",
+"approved rejected by",
+"disposition",
+"disposition reason",
+"top line cost",
+"accessorial",
+"tax",
+"estimated total",
+"finalized total", 
+"total",
+case when "Days to Finalize" > 30 then 30 when "Days to Finalize" < 0 then 0 else "Days to Finalize" end as "Days to Finalize",
+case when "Days to Complete" > 30 then 30 when "Days to Complete" < 0 then 0 else "Days to Complete" end as "Days to Complete",
+convert_timezone(''CDT'', sysdate) AS "LOAD CREATE DATE",
+convert_timezone(''CDT'', sysdate) AS "LOAD UPADTE DATE"
+from 
+
+(select 
+a.source_system as "source system",
+a.file_nbr as "file number",
+a.invoice_nbr as "invoice number",
+a.vendor_id  as "vendor id",
+case when a.source_system = ''WT'' then v.name else eev.name end as "vendor name",
+a.service_id as "service id",
+a.vendor_invoice_nbr as "vendor invoice number",
+a.invoice_seq_nbr as "invoice sequence number",
+a.revenue_stn as "revenue station",
+revenuestn.location as "revenue location",
+revenuestn.region as "revenue region",
+a.controlling_stn as "controlling station",
+controllingstn.location as "controlling location",
+controllingstn.region as "controlling region",
+a.bill_to_nbr as "bill to number",
+bc.name AS "Bill to Customer",
+a.cntrl_cust_nbr "Control Customer number",
+cc.name AS "Controlling Customer",
+bc.sales_Rep as "sales rep",
+case when a.source_system = ''EE'' then bc.account_mgr else b.accnt_manager end as "account manager",
+a.consol_nbr as "consol number",
+a.charge_cd as "charge code",
+a.invoice_date as "invoice date",
+a.finalized_date as "finalized_date",
+a.vendor_complete_date as "vendor complete date",
+a.finalized_by as "finalized by",
+a.updated_by as "updated by",
+a.approved_rejected_date as "approved rejected date",
+a.approved_rejected_by as "approved rejected by",
+a.disposition as "disposition",
+a.disposition_reason as "disposition reason",
+a.top_line_cost as "top line cost",
+a.accessorial as "accessorial",
+a.tax as "tax",
+a.estimated_total as "estimated total",
+a.finalized_total as "finalized total", 
+a.total as "total",
+case when a.source_system = ''EE'' then 
+(DATEDIFF(''day'', coalesce(COALESCE (pod_date,eta_Date),file_Date), case when cast(a.finalized_Date as date) = ''1900-01-01'' then null else a.finalized_Date end))
+-(DATEDIFF(''week'',coalesce(COALESCE (pod_date,eta_Date),file_Date), case when cast(a.finalized_Date as date) = ''1900-01-01'' then null else a.finalized_Date end ) * 2)
+-(CASE WHEN DATE_PART(dow, coalesce(COALESCE (pod_date,eta_Date),file_Date)) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.finalized_Date as date) = ''1900-01-01'' then null else a.finalized_Date end ) = 6 THEN 1 ELSE 0 END) 
+when a.source_system = ''WT'' and  a.service_id in (''LT'',''LD'')then
+(DATEDIFF(''day'', pod_Date, case when cast(a.finalized_Date as date) = ''1900-01-01'' then null else a.finalized_Date end))
+-(DATEDIFF(''week'',pod_Date, case when cast(a.finalized_Date as date) = ''1900-01-01'' then null else a.finalized_Date end ) * 2)
+-(CASE WHEN DATE_PART(dow, pod_Date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.finalized_Date as date) = ''1900-01-01'' then null else a.finalized_Date end ) = 6 THEN 1 ELSE 0 END) 
+else 
+(DATEDIFF(''day'', rev_recognition_Date, case when cast(a.finalized_Date as date) = ''1900-01-01'' then null else a.finalized_Date end))
+-(DATEDIFF(''week'',rev_recognition_Date, case when cast(a.finalized_Date as date) = ''1900-01-01'' then null else a.finalized_Date end ) * 2)
+-(CASE WHEN DATE_PART(dow, rev_recognition_Date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.finalized_Date as date) = ''1900-01-01'' then null else a.finalized_Date end ) = 6 THEN 1 ELSE 0 END) 
+end as "Days to Finalize",
+
+case when a.source_system = ''EE'' then 
+(DATEDIFF(''day'', coalesce(COALESCE (pod_date,eta_Date),file_Date), case when cast(a.vendor_complete_date as date) = ''1900-01-01'' then null else a.vendor_complete_date end))
+-(DATEDIFF(''week'',coalesce(COALESCE (pod_date,eta_Date),file_Date), case when cast(a.vendor_complete_date as date) = ''1900-01-01'' then null else a.vendor_complete_date end ) * 2)
+-(CASE WHEN DATE_PART(dow, coalesce(COALESCE (pod_date,eta_Date),file_Date)) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.vendor_complete_date as date) = ''1900-01-01'' then null else a.vendor_complete_date end ) = 6 THEN 1 ELSE 0 END) 
+when a.source_system = ''WT''  and a.service_id in (''LT'',''LD'') then 
+(DATEDIFF(''day'', pod_Date, case when cast(a.vendor_complete_date as date) = ''1900-01-01'' then null else a.vendor_complete_date end))
+-(DATEDIFF(''week'',pod_Date, case when cast(a.vendor_complete_date as date) = ''1900-01-01'' then null else a.vendor_complete_date end ) * 2)
+-(CASE WHEN DATE_PART(dow, pod_Date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.vendor_complete_date as date) = ''1900-01-01'' then null else a.vendor_complete_date end ) = 6 THEN 1 ELSE 0 END) 
+else 
+(DATEDIFF(''day'', rev_recognition_date, case when cast(a.vendor_complete_date as date) = ''1900-01-01'' then null else a.vendor_complete_date end))
+-(DATEDIFF(''week'',rev_recognition_date, case when cast(a.vendor_complete_date as date) = ''1900-01-01'' then null else a.vendor_complete_date end ) * 2)
+-(CASE WHEN DATE_PART(dow, rev_recognition_date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.vendor_complete_date as date) = ''1900-01-01'' then null else a.vendor_complete_date end ) = 6 THEN 1 ELSE 0 END) 
+end as "Days to Complete"
+FROM ap_invoice_payments a 
+left outer join 
+shipment_info b
+on a.source_system = b.source_system 
+and a.file_nbr = b.file_nbr 
+left outer join office_location revenuestn
+on a.revenue_stn   = revenuestn.stn
+left outer join office_location controllingstn
+on a.controlling_stn   = controllingstn.stn
+left outer join customers bc
+on a.source_system = bc.source_system 
+and trim(a.bill_to_nbr) = bc.nbr 
+left outer join customers cc
+on a.source_system = cc.source_system 
+and trim(a.cntrl_cust_nbr) = cc.nbr 
+left outer join vendors v
+on a.source_system = v.source_system
+and upper(a.vendor_id)  = upper(v.vendor_id)
+left outer join customers eev
+on a.source_system = eev.source_system 
+and trim(a.vendor_id) = eev.nbr 
+)main
+'
+)
+TO 's3://dw-datapipeline-prod/Data/Invoices/dm_ap_data1'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel off
+ALLOWOVERWRITE

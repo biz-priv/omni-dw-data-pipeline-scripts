@@ -1,0 +1,29 @@
+truncate table public.fourkites_ltl_stage;
+
+copy fourkites_ltl_stage from 's3://dw-datapipeline-prod/Data/ltl_new_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+
+insert into fourkites_ltl select * from fourkites_ltl_stage 
+where file_nbr+reference_nbr+status NOT IN (Select DISTINCT file_nbr+reference_nbr+status from fourkites_ltl);
+
+
+update fourkites_ltl set 
+file_date=s.file_date,
+handling_stn=s.handling_stn,
+controlling_stn=s.controlling_stn,
+house_bill_nbr=s.house_bill_nbr,
+shipper_name=s.shipper_name,
+consignee_name=s.consignee_name,
+event_Date = s.event_date,
+bill_to_nbr=s.bill_to_nbr,
+pod = s.pod,
+pod_date=s.pod_date,
+load_update_date= getdate()
+from fourkites_ltl_stage s 
+where 
+(
+	fourkites_ltl.file_nbr=s.file_nbr 
+	and fourkites_ltl.reference_nbr=s.reference_nbr
+	and fourkites_ltl.status=s.status 
+	and COALESCE (fourkites_ltl.pod_date,'1900-01-01') <> s.pod_date 
+);

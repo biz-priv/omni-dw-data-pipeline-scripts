@@ -1,0 +1,130 @@
+UNLOAD
+(
+$$
+select distinct 
+Source_System,
+file_nbr,
+Invoice_nbr,
+vendor_id,
+service_id,
+vendor_invoice_nbr,
+invoice_seq_nbr,
+revenue_stn,
+controlling_Stn,
+bill_to_nbr,
+cntrl_cust_nbr,
+consol_nbr,
+service as charge_Cd,
+CASE WHEN CAST(invoice_Date AS DATE) = '1900-01-01' THEN NULL ELSE invoice_Date END AS invoice_Date,
+CASE WHEN CAST(finalized_Date AS DATE) = '1900-01-01' THEN NULL ELSE finalized_Date END AS finalized_Date,
+min(vendorcompletedate)over (partition by Source_System,file_nbr,Invoice_nbr,vendor_id,service_id,vendor_invoice_nbr,invoice_seq_nbr,revenue_stn,controlling_Stn,bill_to_nbr,consol_nbr,service ,
+CASE WHEN CAST(invoice_Date AS DATE) = '1900-01-01' THEN NULL ELSE invoice_Date END ,
+CASE WHEN CAST(finalized_Date AS DATE) = '1900-01-01' THEN NULL ELSE finalized_Date END ,
+finalized_by,updated_by,CASE WHEN CAST(approved_rejected_date AS DATE)  = '1900-01-01' THEN NULL ELSE approved_rejected_date END ,
+approved_rejected_by,Disposition,translate(regexp_replace(Disposition_reason, '\r|\n', ''),'|','')) as vendorcompletedate,
+finalized_by,
+updated_by,
+CASE WHEN CAST(approved_rejected_date AS DATE)  = '1900-01-01' THEN NULL ELSE approved_rejected_date END AS approved_rejected_date,
+approved_rejected_by,
+Disposition,
+translate(regexp_replace(Disposition_reason, '\r|\n', ''),'|','') AS Disposition_reason,
+sum(top_line_cost) over (partition by Source_System,file_nbr,Invoice_nbr,vendor_id,service_id,vendor_invoice_nbr,invoice_seq_nbr,revenue_stn,controlling_Stn,bill_to_nbr,consol_nbr,service ,
+CASE WHEN CAST(invoice_Date AS DATE) = '1900-01-01' THEN NULL ELSE invoice_Date END ,
+CASE WHEN CAST(finalized_Date AS DATE) = '1900-01-01' THEN NULL ELSE finalized_Date END ,
+finalized_by,updated_by,CASE WHEN CAST(approved_rejected_date AS DATE)  = '1900-01-01' THEN NULL ELSE approved_rejected_date END ,
+approved_rejected_by,Disposition,translate(regexp_replace(Disposition_reason, '\r|\n', ''),'|','')) as top_line_cost,
+sum(Accessorial)over (partition by Source_System,file_nbr,Invoice_nbr,vendor_id,service_id,vendor_invoice_nbr,invoice_seq_nbr,revenue_stn,controlling_Stn,bill_to_nbr,consol_nbr,service ,
+CASE WHEN CAST(invoice_Date AS DATE) = '1900-01-01' THEN NULL ELSE invoice_Date END ,
+CASE WHEN CAST(finalized_Date AS DATE) = '1900-01-01' THEN NULL ELSE finalized_Date END ,
+finalized_by,updated_by,CASE WHEN CAST(approved_rejected_date AS DATE)  = '1900-01-01' THEN NULL ELSE approved_rejected_date END ,
+approved_rejected_by,Disposition,translate(regexp_replace(Disposition_reason, '\r|\n', ''),'|','') ) as Accessorial,
+sum(tax)over (partition by Source_System,file_nbr,Invoice_nbr,vendor_id,service_id,vendor_invoice_nbr,invoice_seq_nbr,revenue_stn,controlling_Stn,bill_to_nbr,consol_nbr,service ,
+CASE WHEN CAST(invoice_Date AS DATE) = '1900-01-01' THEN NULL ELSE invoice_Date END ,
+CASE WHEN CAST(finalized_Date AS DATE) = '1900-01-01' THEN NULL ELSE finalized_Date END ,
+finalized_by,updated_by,CASE WHEN CAST(approved_rejected_date AS DATE)  = '1900-01-01' THEN NULL ELSE approved_rejected_date END ,
+approved_rejected_by,Disposition,translate(regexp_replace(Disposition_reason, '\r|\n', ''),'|','') ) as tax,
+sum(Estimated_Total)over (partition by Source_System,file_nbr,Invoice_nbr,vendor_id,service_id,vendor_invoice_nbr,invoice_seq_nbr,revenue_stn,controlling_Stn,bill_to_nbr,consol_nbr,service ,
+CASE WHEN CAST(invoice_Date AS DATE) = '1900-01-01' THEN NULL ELSE invoice_Date END ,
+CASE WHEN CAST(finalized_Date AS DATE) = '1900-01-01' THEN NULL ELSE finalized_Date END ,
+finalized_by,updated_by,CASE WHEN CAST(approved_rejected_date AS DATE)  = '1900-01-01' THEN NULL ELSE approved_rejected_date END ,
+approved_rejected_by,Disposition,translate(regexp_replace(Disposition_reason, '\r|\n', ''),'|','')) as Estimated_Total,
+sum(finalized_total)over (partition by Source_System,file_nbr,Invoice_nbr,vendor_id,service_id,vendor_invoice_nbr,invoice_seq_nbr,revenue_stn,controlling_Stn,bill_to_nbr,consol_nbr,service ,
+CASE WHEN CAST(invoice_Date AS DATE) = '1900-01-01' THEN NULL ELSE invoice_Date END ,
+CASE WHEN CAST(finalized_Date AS DATE) = '1900-01-01' THEN NULL ELSE finalized_Date END ,
+finalized_by,updated_by,CASE WHEN CAST(approved_rejected_date AS DATE)  = '1900-01-01' THEN NULL ELSE approved_rejected_date END ,
+approved_rejected_by,Disposition,translate(regexp_replace(Disposition_reason, '\r|\n', ''),'|','')) as finalized_total,
+sum(Total)over (partition by Source_System,file_nbr,Invoice_nbr,vendor_id,service_id,vendor_invoice_nbr,invoice_seq_nbr,revenue_stn,controlling_Stn,bill_to_nbr,consol_nbr,service ,
+CASE WHEN CAST(invoice_Date AS DATE) = '1900-01-01' THEN NULL ELSE invoice_Date END ,
+CASE WHEN CAST(finalized_Date AS DATE) = '1900-01-01' THEN NULL ELSE finalized_Date END ,
+finalized_by,updated_by,CASE WHEN CAST(approved_rejected_date AS DATE)  = '1900-01-01' THEN NULL ELSE approved_rejected_date END ,
+approved_rejected_by,Disposition,translate(regexp_replace(Disposition_reason, '\r|\n', ''),'|','')) as Total,
+convert_timezone('CDT',sysdate) AS LOAD_CREATE_DATE,
+convert_timezone('CDT',sysdate) AS LOAD_UPADTE_DATE
+from
+(
+select 
+'WT' as  Source_System,
+a.pk_orderno as file_nbr,
+a.housebill as Invoice_nbr,
+b.fk_vendorid as vendor_id,
+b.fk_serviceid as service_id,
+b.refno as vendor_invoice_nbr,
+b.invoiceseqno as invoice_seq_nbr,
+a.handlingstation as revenue_stn,
+a.controllingstation as controlling_stn,
+case when b.invoiceseqno  = 0 then a.billno else b.fk_custno  end as bill_to_nbr,
+a.fk_controlcustomerno as cntrl_cust_nbr,
+b.consolno as consol_nbr,
+tv.service ,
+b.invoicedate as invoice_Date,
+b.finalizeddate as finalized_Date,
+b.finalizedby as finalized_by,
+b.updatedby as updated_by,
+b.approvedrejecteddatetime as approved_rejected_date,
+b.approvedrejectedby as approved_rejected_by,
+decode(b.RequiresApproval,'X','Rejected','A','Accepted','T','Pending','Y','Pending',b.RequiresApproval)as Disposition,
+case when (b.requiresapproval = 'X' or b.requiresapproval = 'A') then c.notes else '' end as disposition_reason,
+aux.vendorcompletedate,
+b.cost  as top_line_cost,
+b.extra  as Accessorial,
+b.tax as tax,
+b.total as Estimated_Total,
+b.finalizedtotal  as finalized_total,
+case when finalize = 'Y' then b.FINALIZEDTOTAL else b.TOTAL end TOTAL 
+from 
+dbc.tbl_shipmentheader a join 
+dbc.tbl_shipmentapar b
+on a.pk_orderno = b.fk_orderno 
+left outer join 
+(select distinct pk_serviceid ,service  from dbc.tbl_vendorservices ) tv 
+on b.fk_serviceid = tv.pk_serviceid 
+left outer join 
+(select 
+a.fk_orderno ,a.fk_seqno , max(notes)notes
+from dbc.tbl_aparnotes a
+where a.fk_seqno <> '9999'
+group by a.fk_orderno ,a.fk_seqno 
+)c
+on b.seqno = c.fk_seqno 
+and b.fk_orderno = c.fk_orderno
+/*left outer join dbc.tbl_aparnotes d  on b.fk_orderno = d.fk_orderno and b.consolno = d.consolno and b.seqno = d.fk_seqno*/
+left outer join
+(
+select 
+fk_orderno,aparseqno,min(case when vendorcompletedate= '1900-01-01' then null else  vendorcompletedate end )vendorcompletedate
+from dbc.tbl_shipmentaparaux ts 
+where aparseqno <> '9999'
+group by fk_orderno,aparseqno
+)aux
+on b.fk_orderno = aux.fk_orderno
+and b.seqno = aux.aparseqno
+where a.orderdate >= '2017-12-30'
+and b.aparcode = 'V'
+and b.seqno <> '9999'
+)main
+$$
+)
+TO 's3://dw-datapipeline-prod/Data/Invoices/wt_ap_invoice_payments_data_stage1'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint' 
+Parallel off
+ALLOWOVERWRITE

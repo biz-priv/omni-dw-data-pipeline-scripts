@@ -1,0 +1,48 @@
+truncate table api_shipment_info_stage;
+
+copy api_shipment_info_stage from 's3://dw-datapipeline-prod/Data/api_shipment_info_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+update 
+api_shipment_info 
+set 
+file_date = s.file_Date,
+handling_stn = s.handling_stn, 
+master_bill_nbr = s.master_bill_nbr, 
+house_bill_nbr = s.house_bill_nbr, 
+origin_port_iata = s.origin_port_iata, 
+destination_port_iata = s.destination_port_iata,
+shipper_name = s.shipper_name,
+consignee_name = s.consignee_name,
+pieces = s.pieces, 
+actual_wght_lbs = s.actual_wght_lbs,
+actual_wght_kgs = s.actual_wght_kgs,
+chrg_wght_lbs = s.chrg_wght_lbs,
+chrg_wght_kgs = s.chrg_wght_kgs, 
+pickup_date = s.pickup_date,
+pod_date = s.pod_date,
+eta_date = s.eta_date,
+etd_date = s.etd_date,
+schd_delv_date = s.schd_delv_date, 
+shipment_mode = s.shipment_mode,
+service_level = s.service_level,
+order_status = s.order_status,
+order_status_desc = s.order_status_desc,
+bill_to_customer = s.bill_to_customer, 
+cntrl_customer =s.cntrl_customer,
+load_update_date = s.load_create_date  
+
+from api_shipment_info_stage s 
+where 
+(
+	api_shipment_info.source_system = s.source_system
+	and api_shipment_info.file_nbr = s.file_nbr
+);
+
+delete from api_shipment_info_stage using api_shipment_info t 
+where 
+(
+	api_shipment_info_stage.source_system = t.source_system
+	and api_shipment_info_stage.file_nbr = t.file_nbr
+);
+
+insert into api_shipment_info select * from api_shipment_info_stage;

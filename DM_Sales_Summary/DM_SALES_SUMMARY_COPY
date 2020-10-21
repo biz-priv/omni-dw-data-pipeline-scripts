@@ -1,0 +1,3 @@
+truncate table datamart.sales_summary;
+
+copy datamart.sales_summary from 's3://dw-datapipeline-prod/Data/sales_summary_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';

@@ -1,0 +1,165 @@
+UNLOAD(
+'
+select 
+"source system",
+"file number",
+"revenue station",
+"revenue location",
+"revenue region",
+"controlling station",
+"controlling location",
+"controlling region",
+"invoice number",
+"invoice sequence number",
+"bill to number",
+"Bill to Customer",
+"Control Customer number",
+"Controlling Customer",
+"sales rep",
+"account manager",
+"charge code",
+"charge code description",
+"charge category",
+"invoice date",
+"finalized date",
+"finalized by",
+"updated by" ,
+"due date",
+"invoice printed date",
+"rfi date",
+"posted date",
+"Total",
+case when "POD to RFI" > 30 then 30 when "POD to RFI" < 0 then 0 else "pod to RFI" end as "pod to RFI" ,
+case when "POD to PST" > 30 then 30 when "POD to PST" < 0 then 0 else "POD to PST" end  as "POD to PST" ,
+case when "Pickup to RFI" > 30 then 30 when "Pickup to RFI" < 0 then 0 else "Pickup to RFI" end as "Pickup to RFI",
+case when "Pickup to PST" > 30 then 30 when "Pickup to PST" < 0 then 0 else "Pickup to PST" end as "Pickup to PST",
+case when "RFI to Invoice" > 30 then 30 when "RFI to Invoice" < 0 then 0 else "RFI to Invoice" end as "RFI to Invoice",
+"LOAD CREATE DATE",
+"LOAD UPDATE DATE"
+from 
+(select 
+a.source_system as "source system",
+a.file_nbr as "file number",
+a.revenue_stn as "revenue station",
+revloc.location as "revenue location",
+revloc.region as "revenue region",
+a.controlling_stn as "controlling station",
+cntrlloc.location as "controlling location",
+cntrlloc.region as "controlling region",
+a.invoice_nbr as "invoice number",
+a.invoice_seq_nbr as "invoice sequence number",
+a.bill_to_nbr as "bill to number",
+bc.name AS "Bill to Customer",
+a.cntrl_cust_nbr as "Control Customer number",
+cc.name AS "Controlling Customer",
+bc.sales_Rep as "sales rep",
+case when a.source_system = ''EE'' then bc.account_mgr else b.accnt_manager end as "account manager",
+a.charge_cd as "charge code",
+a.charge_cd_desc as "charge code description",
+cat.category as "charge category",
+a.invoice_date as "invoice date",
+a.finalized_date as "finalized date",
+a.finalized_by as "finalized by",
+a.updated_by as "updated by" ,
+a.due_date as "due date",
+a.inv_printed_date as "invoice printed date",
+a.rfi_date as "rfi date",
+a.posted_date as "posted date",
+a.total as "Total",
+case when 
+a.source_system  = ''EE'' 
+then (DATEDIFF(''day'', coalesce(COALESCE (pod_date,eta_Date),file_Date), case when cast(a.rfi_Date as date) = ''1900-01-01'' then null else a.rfi_Date end))
+-(DATEDIFF(''week'',coalesce(COALESCE (pod_date,eta_Date),file_Date), case when cast(a.rfi_Date as date) = ''1900-01-01'' then null else a.rfi_Date end ) * 2)
+-(CASE WHEN DATE_PART(dow, coalesce(COALESCE (pod_date,eta_Date),file_Date)) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.rfi_Date as date) = ''1900-01-01'' then null else a.rfi_Date end ) = 6 THEN 1 ELSE 0 END) 
+else 
+(DATEDIFF(''day'', b.pod_Date, rfi_Date))
+-(DATEDIFF(''week'',b.pod_Date, rfi_Date) * 2)
+-(CASE WHEN DATE_PART(dow, b.pod_Date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, a.rfi_Date) = 6 THEN 1 ELSE 0 END) 
+end 
+as "POD to RFI",
+
+case when a.source_system = ''EE''
+then 
+(DATEDIFF(''day'', coalesce(COALESCE (pod_date,eta_Date),file_Date), case when cast(a.posted_Date as date) = ''1900-01-01'' then null else a.posted_Date end))
+-(DATEDIFF(''week'',coalesce(COALESCE (pod_date,eta_Date),file_Date), case when cast(a.posted_Date as date) = ''1900-01-01'' then null else a.posted_Date end ) * 2)
+-(CASE WHEN DATE_PART(dow, coalesce(COALESCE (pod_date,eta_Date),file_Date)) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.posted_Date as date) = ''1900-01-01'' then null else a.posted_Date end ) = 6 THEN 1 ELSE 0 END) 
+else 
+ (DATEDIFF(''day'', b.pod_Date, posted_Date))
+-(DATEDIFF(''week'',b.pod_Date, posted_Date) * 2)
+-(CASE WHEN DATE_PART(dow, b.pod_Date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, a.posted_Date) = 6 THEN 1 ELSE 0 END) 
+end 
+as "POD to PST",
+
+case when a.source_system = ''EE''
+then
+(DATEDIFF(''day'', COALESCE (pickup_date,file_Date), case when cast(a.rfi_Date as date) = ''1900-01-01'' then null else a.rfi_Date end))
+-(DATEDIFF(''week'',COALESCE (pickup_date,file_Date), case when cast(a.rfi_Date as date) = ''1900-01-01'' then null else a.rfi_Date end ) * 2)
+-(CASE WHEN DATE_PART(dow, COALESCE (pickup_date,file_Date)) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.rfi_Date as date) = ''1900-01-01'' then null else a.rfi_Date end ) = 6 THEN 1 ELSE 0 END) 
+else 
+ (DATEDIFF(''day'', b.pickup_Date, rfi_Date))
+-(DATEDIFF(''week'',b.pickup_Date, rfi_Date) * 2)
+-(CASE WHEN DATE_PART(dow, b.pickup_Date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, a.rfi_Date) = 6 THEN 1 ELSE 0 END) 
+end as "Pickup to RFI",
+
+case when a.source_system = ''EE''
+then
+(DATEDIFF(''day'', COALESCE (pickup_date,file_Date), case when cast(a.posted_Date as date) = ''1900-01-01'' then null else a.posted_Date end))
+-(DATEDIFF(''week'',COALESCE (pickup_date,file_Date), case when cast(a.posted_Date as date) = ''1900-01-01'' then null else a.posted_Date end ) * 2)
+-(CASE WHEN DATE_PART(dow, COALESCE (pickup_date,file_Date)) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.posted_Date as date) = ''1900-01-01'' then null else a.posted_Date end ) = 6 THEN 1 ELSE 0 END) 
+else
+(DATEDIFF(''day'', b.pickup_Date, posted_Date))
+-(DATEDIFF(''week'',b.pickup_Date, posted_Date) * 2)
+-(CASE WHEN DATE_PART(dow, b.pickup_Date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, a.posted_Date) = 6 THEN 1 ELSE 0 END) 
+end 
+as "Pickup to PST",
+
+case when a.source_system = ''EE''
+then
+(DATEDIFF(''day'', rfi_Date, case when cast(a.inv_printed_date as date) = ''1900-01-01'' then null else a.inv_printed_date end))
+-(DATEDIFF(''week'',rfi_Date, case when cast(a.inv_printed_date as date) = ''1900-01-01'' then null else a.inv_printed_date end ) * 2)
+-(CASE WHEN DATE_PART(dow, rfi_Date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, case when cast(a.inv_printed_date as date) = ''1900-01-01'' then null else a.inv_printed_date end ) = 6 THEN 1 ELSE 0 END) 
+else
+(DATEDIFF(''day'', rfi_Date, inv_printed_date))
+-(DATEDIFF(''week'',rfi_Date, inv_printed_date) * 2)
+-(CASE WHEN DATE_PART(dow, rfi_Date) = 0 THEN 1 ELSE 0 END)
+-(CASE WHEN DATE_PART(dow, a.inv_printed_date) = 6 THEN 1 ELSE 0 END) 
+end 
+as "RFI to Invoice",
+
+convert_timezone(''CDT'', sysdate) AS "LOAD CREATE DATE",
+convert_timezone(''CDT'', sysdate) AS "LOAD UPDATE DATE"
+from 
+public.ar_invoice_receivables a 
+join shipment_info b
+on a.source_system  = b.source_system 
+and a.file_nbr = b.file_nbr 
+left outer join
+office_location revloc
+on a.revenue_stn = revloc.stn
+left outer join office_location cntrlloc
+on a.controlling_stn = cntrlloc.stn
+left outer join customers bc
+on a.source_system = bc.source_system 
+and trim(a.bill_to_nbr) = bc.nbr 
+left outer join customers cc
+on a.source_system = cc.source_system 
+and trim(a.cntrl_cust_nbr) = cc.nbr 
+left outer join charge_category cat
+on a.source_system = cat.source_system
+and a.charge_cd = cat.charge_cd
+)main
+'
+)
+TO 's3://dw-datapipeline-prod/Data/Invoices/dm_ar_data1'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel off
+ALLOWOVERWRITE

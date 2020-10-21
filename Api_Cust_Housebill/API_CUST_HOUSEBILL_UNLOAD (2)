@@ -1,0 +1,25 @@
+UNLOAD(
+'
+SELECT distinct 
+A.ID,
+B.SOURCE_SYSTEM,
+b.file_nbr,
+case when COALESCE(B.HOUSE_BILL_NBR,'''') = '''' then B.master_bill_nbr else B.HOUSE_BILL_NBR end house_bill_nbr,
+A.cust_nbr,
+'''' as message_sent
+FROM api_token A
+JOIN
+shipment_info B
+ON A.source_system = B.source_system
+AND A.cust_nbr = trim(B.bill_to_nbr)
+AND shipment_quote IN (''S'')
+AND current_status <> ''CAN''
+AND house_bill_nbr <> ''0'' and house_bill_nbr <> ''''
+and (datediff(day,pod_date ,current_Date) <= 90 or pod_Date is null)
+and bill_to_nbr in (''9468'',''2004'')
+'
+)
+TO 's3://dw-datapipeline-prod/Data/api_cust_housebill_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

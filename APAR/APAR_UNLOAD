@@ -1,0 +1,64 @@
+UNLOAD(
+'
+select 
+coalesce(apar."source system",s."source system") as  "source system",
+coalesce(apar."file number",s."file number") as "file number",
+apar."invoice number",
+case when coalesce(cast(apar."invoice sequence number" as varchar(10)),'''') = '''' then 0 else apar."invoice sequence number" end as "invoice sequence number",
+coalesce(apar."revenue station",s."revenue station")  as"revenue station",
+coalesce(apar."revenue location",s."revenue location") as "revenue location",
+coalesce(apar."revenue region",s."revenue region") as  "revenue region",
+coalesce(apar."controlling station",s."controlling station")  as "controlling station",
+coalesce(apar."controlling location",s."controlling location") as  "controlling location",
+coalesce(apar."controlling region",s."controlling region")  as "controlling region",
+apar."Invoice Date",
+trim(coalesce(apar."bill to number",cast(s."original bill to number" as varchar(20))))  "bill to number",
+coalesce(apar."bill to customer",s."original bill to customer")  "bill to customer",
+trim(coalesce(apar."control customer number",cast(s."original control number" as varchar(20)))) "control customer number",
+coalesce(apar."controlling customer",s."original control customer")  "controlling customer",
+coalesce(apar."sales rep",s."sales person") "sales person",
+coalesce(apar."account manager",s."account manager") "account manager"
+from 
+datamart.shipment_extract s
+left outer join 
+(
+select distinct 
+coalesce(ap."source system",ar."source system") as "source system",
+coalesce(ap."file number",ar."file number") as "file number",
+coalesce(ap."invoice number",ar."invoice number")  as "invoice number",
+coalesce(ap."invoice sequence number",ar."invoice sequence number") as "invoice sequence number",
+coalesce(ap."revenue station",ar."revenue station") as "revenue station",
+coalesce(ap."revenue location",ar."revenue location") as "revenue location",
+coalesce(ap."revenue region",ar."revenue region") as "revenue region",
+coalesce(ap."controlling station",ar."controlling station") as "controlling station",
+coalesce(ap."controlling location",ar."controlling location") as "controlling location",
+coalesce(ap."controlling region",ar."controlling region") as "controlling region",
+coalesce(
+(case when coalesce(ap."source system",ar."source system" ) = ''EE'' then coalesce(ap."invoice date" ,ar."invoice date" ) else null end) ,
+(case when coalesce(ap."source system",ar."source system" ) = ''WT'' then ar."invoice printed date" else null end )
+) as "Invoice Date",
+coalesce(ap."bill to number",ar."bill to number") as "bill to number",
+coalesce(ap."bill to customer",ar."bill to customer") as "bill to customer",
+coalesce(ap."control customer number",ar."control customer number") as "control customer number",
+coalesce(ap."controlling customer",ar."controlling customer") as "controlling customer",
+coalesce(ap."sales rep",ar."sales rep") as "sales rep",
+coalesce(ap."account manager",ar."account manager") as "account manager"
+
+from 
+datamart.ap_invoices ap
+full outer join 
+datamart.ar_invoices ar 
+on ap."source system" = ar."source system" 
+and ap."file number" = ar."file number" 
+and ap."invoice number" = ar."invoice number" 
+and ap."invoice sequence number" = ar."invoice sequence number"
+)apar
+on 
+s."source system" = apar."source system"
+and s."file number" = apar."file number"
+'
+)
+TO 's3://dw-datapipeline-prod/Data/apar_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

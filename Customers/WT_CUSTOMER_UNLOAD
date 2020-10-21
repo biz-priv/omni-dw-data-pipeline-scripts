@@ -1,0 +1,37 @@
+unload
+(
+$$
+SELECT 
+distinct
+'WT' AS SOURCE_SYSTEM,
+pk_custno AS NBR,
+custname AS NAME,
+s.description  as sales_rep,
+'' as account_mgr,
+s.description as owner,
+custaddress1 AS ADDR1,
+custaddress2 AS ADDR2,
+custcity AS CITY,
+fk_custstate AS STATE,
+fk_custcountry AS COUNTRY,
+custzip AS ZIP,
+custcontact as cust_contact,
+c.email as email,
+apemail as ap_email,  
+BillToOnly as billto_only,
+ControllingOnly as controlling_only,
+fk_billtocustno as bill_to_nbr,
+fk_controllingcustno as controlling_nbr,
+fk_stationid as Station,
+convert_timezone('CDT',sysdate) AS LOAD_CREATE_DATE,
+CAST(NULL AS timestamp) AS LOAD_UPADTE_DATE
+FROM
+dbc.tbl_customers c
+left outer join 
+dbc.tbl_salesperson s
+on c.fk_salesperson = s.pk_salespersonid 
+$$
+)
+TO 's3://dw-datapipeline-prod/Data/Customers/wt_customers/'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+ALLOWOVERWRITE

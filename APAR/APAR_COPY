@@ -1,0 +1,5 @@
+truncate table datamart.APAR;
+COPY datamart.APAR FROM 's3://dw-datapipeline-prod/Data/apar_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+COMPUPDATE OFF 
+STATUPDATE OFF;
+

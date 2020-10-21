@@ -1,0 +1,231 @@
+UNLOAD(
+'
+select
+Source_System,
+file_nbr,
+origin as revenue_stn,
+origin as controlling_Stn,
+invoice_nbr,
+0 AS INVOICE_SEQ_NBR,
+--DENSE_RANK () over (partition by file_nbr ORDER BY Invoice_Date)-1 AS INVOICE_SEQ_NBR,
+acctno as Bill_to_nbr,
+acctno as Cntrl_cust_nbr,
+charge_Cd as charge_Cd,
+charge_desc as charge_Desc,
+Invoice_Date,
+finalized_Date,
+Finalized_by,
+updated_by,
+'''' as due_Date,
+finalized_Date as inv_printed_Date, 
+finalized_Date as rfi_Date,
+finalized_Date as posted_Date,
+Total,
+convert_timezone(''CDT'',sysdate) AS LOAD_CREATE_DATE,
+convert_timezone(''CDT'',sysdate) AS LOAD_UPADTE_DATE
+from 
+(select 
+Source_System,
+file_nbr,
+invoice_nbr,
+origin,
+acctno,
+x12code as charge_Cd,
+text as charge_desc,
+Invoice_Date,
+finalized_Date,
+Finalized_by,
+updated_by,
+sum(Total) as Total
+
+FROM 
+
+(select   
+''EE'' as Source_System,
+main.file_nbr,
+invoice.fileno as invoice_nbr,
+invoice.origin,
+invoice.acctno,
+x12.x12code,
+invitem.text,
+(CAST((CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(invitem.charge as float) * E.RATE
+ELSE cast(invitem.charge as float) END) AS DECIMAL(10,2)))   AS Total,
+invoice.ledate as Invoice_Date,
+case when m.msg = ''I:AAR'' then m.ledate else null end as finalized_Date,
+case when m.msg = ''I:AAR'' then m.path else null end as Finalized_by,
+case when m.msg = ''I:AAR'' then m.path else null end as updated_by
+
+from 
+(
+SELECT
+A.FILENO file_nbr,
+B.FILENO INVOICE,
+regexp_replace(A.MAWB, ''\r|\n'', '''') AS MASTER_BILL_NBR
+--a.ledate
+FROM
+expert32.AWB A
+JOIN  EXPERT32.ADDBILL B 
+ON A.FILENO = B.ORIGFILENO
+left outer JOIN
+expert32.INVOICE I
+ON B.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+and a.ledate >= ''2017-12-30''
+and a.type not in (''M'',''O'')
+UNION
+
+SELECT 
+A.FILENO,
+I.FILENO,
+regexp_replace(A.MAWB, ''\r|\n'', '''') AS MASTER_BILL_NBR
+FROM 
+expert32.AWB A
+LEFT OUTER JOIN
+expert32.INVOICE I
+ON A.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+and a.ledate >= ''2017-12-30''
+and a.type not in (''M'',''O'')
+)main
+
+left outer join expert32.invoice 
+on main.invoice= invoice.fileno
+LEFT OUTER join 
+expert32.invitem 
+on invoice.fileno = invitem.fileno
+and invitem.payable = 0
+left outer join 
+(select distinct text,x12code  from expert32.CHARGES)x12
+on invitem.text = x12.text
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON invoice.LEDATE = E.LEDATE
+AND invoice.CURRENCY = E.CURRFROM
+AND E.CURRTO = ''USD''
+LEFT OUTER JOIN (select a.* from expert32.msgsent2 a
+join 
+(select fileno,max(ledate) ledate 
+from expert32.msgsent2 m 
+where --fileno = ''3394323''
+msg = ''I:AAR''
+group by fileno 
+)b
+on a.fileno = b.fileno
+and a.ledate  = b.ledate
+) M
+ON invoice.FILENO = M.FILENO
+AND M.MSG = ''I:AAR''
+)
+group by Source_System,file_nbr,invoice_nbr,origin,acctno,x12code ,text ,Invoice_Date,finalized_Date,Finalized_by,updated_by
+
+
+UNION
+
+SELECT 
+Source_System,
+FILE_NBR,
+invoice_nbr,
+origin,
+acctno,
+x12code as  charge_cd,
+text as charge_desc,
+Invoice_Date,
+finalized_Date,
+Finalized_by,
+updated_by,
+sum(Total) as total
+FROM 
+
+(SELECT 
+''EE'' as Source_System,
+MAIN.ORIGFILENO AS FILE_NBR,
+MAIN.FILENO as invoice_nbr,
+invitem.ref as Vendor_invoice_nbr,
+main.origin,
+main.acctno,
+x12.x12code,
+invitem.text,
+(CAST((CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(invitem.charge as float) * E.RATE
+ELSE cast(invitem.charge as float) END) AS DECIMAL(10,2))) AS Total,
+invoice.ledate as Invoice_Date,
+case when m.msg = ''I:AAR'' then m.ledate else null end as finalized_Date,
+case when m.msg = ''I:AAR'' then m.path else null end as Finalized_by,
+case when m.msg = ''I:AAR'' then m.path else null end as updated_by
+
+
+FROM 
+
+(
+-----------------------------------------------------FIRST-------------------------------------------------------
+SELECT ORIGFILENO,addbill.FILENO,invo.origin,invo.acctno FROM EXPERT32.ADDBILL addbill
+left outer join expert32.invoice invo
+on addbill.fileno = invo.fileno
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+)
+and TRIM(acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+
+-----------------------------------------------------SECOND-------------------------------------------------------
+UNION
+
+select fileno,FILENO,invoice.origin,invoice.acctno  from expert32.INVOICE
+where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select origfileno from expert32.ADDBILL) and
+fileno not in (select fileno from expert32.ADDBILL)
+AND  TRIM(acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+
+-----------------------------------------------------THIRD-------------------------------------------------------
+union
+
+SELECT distinct ORIGFILENO,origfileno ,invo.origin,invo.acctno
+FROM EXPERT32.ADDBILL addbill
+join 
+expert32.invoice invo
+on addbill.origfileno = invo.fileno
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+)
+and TRIM(invo.acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+)MAIN
+join expert32.invoice 
+on main.FILENO= invoice.fileno
+LEFT OUTER join 
+expert32.invitem 
+on invoice.fileno = invitem.fileno
+and invitem.payable = 0
+left outer join 
+(select distinct text,x12code  from expert32.CHARGES)x12
+on invitem.text = x12.text
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON invoice.LEDATE = E.LEDATE
+AND invoice.CURRENCY = E.CURRFROM
+AND E.CURRTO = ''USD''
+LEFT OUTER JOIN (select a.* from expert32.msgsent2 a
+join 
+(select fileno,max(ledate) ledate 
+from expert32.msgsent2 m 
+where --fileno = ''3394323''
+msg = ''I:AAR''
+group by fileno 
+)b
+on a.fileno = b.fileno
+and a.ledate  = b.ledate
+) M
+ON invoice.FILENO = M.FILENO
+AND M.MSG = ''I:AAR''
+)
+WHERE INVOICE_dATE >= ''2017-12-30''
+group by Source_System,FILE_NBR,invoice_nbr,origin,acctno,x12code ,text ,Invoice_Date,finalized_Date,Finalized_by,updated_by
+)z
+'
+)
+TO 's3://dw-datapipeline-prod/Data/Invoices/ee_ar_invoice_receivables_data_stage1'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint' 
+Parallel off
+ALLOWOVERWRITE

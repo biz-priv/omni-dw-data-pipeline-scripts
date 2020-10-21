@@ -1,0 +1,330 @@
+UNLOAD(
+'select
+Source_System,
+file_nbr,
+invoice_nbr,
+vendor_id,
+service_id,
+Vendor_invoice_nbr,
+0  AS INVOICE_SEQ_NBR,
+--DENSE_RANK () over (partition by file_nbr ORDER BY Invoice_Date)-1 AS INVOICE_SEQ_NBR,
+origin as revenue_stn,
+origin as controlling_stn,
+acctno as Bill_to_nbr,
+acctno as cntrl_cust_nbr,
+consol_nbr,
+charge_cd,
+Invoice_Date,
+finalized_Date,
+finalized_Date as vendor_complete_Date,
+Finalized_by,
+updated_by,
+Approved_Rejected_date,
+Approved_Rejected_By,
+Disposition,
+Disposition_Reason,
+top_line_cost,
+Accessorial,
+Tax,
+Estimated_Total,
+Finalized_Total,
+Total,
+convert_timezone(''CDT'',sysdate) AS LOAD_CREATE_DATE,
+convert_timezone(''CDT'',sysdate) AS LOAD_UPADTE_DATE
+from 
+(select 
+Source_System,
+file_nbr,
+invoice_nbr,
+coalesce(vendor_id,''xxxxx'')vendor_id,
+service_id,
+Vendor_invoice_nbr,
+--rank() over (partition by file_nbr ORDER BY Invoice_Date)AS INVOICE_SEQ_NBR,
+origin,
+acctno,
+consol_nbr,
+text as charge_Cd,
+coalesce(top_line_cost,0)top_line_cost,
+Accessorial,
+Tax,
+Estimated_Total,
+Finalized_Total,
+Total,
+Invoice_Date,
+finalized_Date,
+Finalized_by,
+updated_by,
+Approved_Rejected_date,
+Approved_Rejected_By,
+Disposition,
+Disposition_Reason
+FROM 
+
+(select distinct  
+''EE'' as Source_System,
+main.file_nbr,
+invoice.fileno as invoice_nbr,
+invitem.acctno as vendor_id,
+''EE'' as service_id,
+main.MASTER_BILL_NBR as consol_nbr,
+invitem.ref as Vendor_invoice_nbr,
+invoice.origin,
+invoice.acctno,
+invitem.text,
+--ROW_NUMBER() over (partition by main.file_nbr ORDER BY invoice.ledate )AS INVOICE_SEQ_NBR,
+--(CAST(CASE WHEN M.MSG = ''I:AAR'' THEN (CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN BCRC2 * E.RATE
+--ELSE BCRC2 END)ELSE 0 END  AS DECIMAL(10,2)))AS "TOTAL_COST",
+--cast(invitem.charge as float),
+--E.RATE,
+
+sum(CAST((CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) * E.RATE
+ELSE cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) END) AS DECIMAL(10,2)))   over (partition by main.file_nbr,invoice.fileno ,invitem.acctno ,main.MASTER_BILL_NBR ,invitem.ref,invoice.origin,
+invoice.acctno,invitem.text
+ ) AS top_line_cost,
+0 as Accessorial,
+0 as Tax,
+sum(CAST((CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) * E.RATE
+ELSE cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) END) AS DECIMAL(10,2))) over (partition by main.file_nbr,invoice.fileno ,invitem.acctno ,main.MASTER_BILL_NBR ,invitem.ref,invoice.origin,
+invoice.acctno,invitem.text
+ )  AS Estimated_Total,
+
+sum(CAST(CASE WHEN M.MSG = ''I:AAP'' THEN (CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) * E.RATE
+ELSE cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) END)ELSE 0 END  AS DECIMAL(10,2))) over (partition by main.file_nbr,invoice.fileno ,invitem.acctno ,main.MASTER_BILL_NBR ,invitem.ref,invoice.origin,
+invoice.acctno,invitem.text
+ )  AS Finalized_Total,
+
+sum(CAST((CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) * E.RATE
+ELSE cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) END) AS DECIMAL(10,2))) over (partition by main.file_nbr,invoice.fileno ,invitem.acctno ,main.MASTER_BILL_NBR ,invitem.ref,invoice.origin,
+invoice.acctno,invitem.text
+ )  AS Total,
+
+invoice.ledate as Invoice_Date,
+case when m.msg = ''I:AAP'' then m.ledate else null end as finalized_Date,
+case when m.msg = ''I:AAP'' then m.path else null end as Finalized_by,
+case when m.msg = ''I:AAP'' then m.path else null end as updated_by,
+'''' as approved_rejected_date,
+'''' as Approved_Rejected_By,
+'''' as Disposition,
+'''' as Disposition_Reason
+
+from 
+(
+SELECT
+A.FILENO file_nbr,
+B.FILENO INVOICE,
+regexp_replace(A.MAWB, ''\r|\n'', '''') AS MASTER_BILL_NBR
+--a.ledate
+FROM
+expert32.AWB A
+JOIN  EXPERT32.ADDBILL B 
+ON A.FILENO = B.ORIGFILENO
+left outer JOIN
+expert32.INVOICE I
+ON B.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+--AND  A.FILENO = ''68188807''--''00511837''--''00515060''--''00511837''--''68184881''--''00511837''--''41092154''--''45127649''--''07901932''--''68184881''--''92200942''--''00511837''--''68184940''--''00511837''
+and a.ledate >= ''2017-12-30''
+and a.type not in (''M'',''O'')
+UNION
+
+SELECT 
+A.FILENO,
+I.FILENO,
+regexp_replace(A.MAWB, ''\r|\n'', '''') AS MASTER_BILL_NBR
+--a.ledate
+FROM 
+expert32.AWB A
+LEFT OUTER JOIN
+expert32.INVOICE I
+ON A.FILENO = I.FILENO
+WHERE TRIM(I.acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+--AND  A.FILENO = ''68188807''--''00511837''--''00515060''--''00511837''--''68184881''--''00511837''--''41092154''--''45127649''--''07901932''--''68184881''--''92200942''--''00511837''--''68184940''--''00511837''
+and a.ledate >= ''2017-12-30''
+and a.type not in (''M'',''O'')
+)main
+
+left outer join expert32.invoice 
+on main.invoice= invoice.fileno
+LEFT OUTER join 
+expert32.invitem 
+on invoice.fileno = invitem.fileno
+and invitem.payable = -1
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON invoice.LEDATE = E.LEDATE
+AND invoice.CURRENCY = E.CURRFROM
+AND E.CURRTO = ''USD''
+LEFT OUTER JOIN (select a.* from expert32.msgsent2 a
+join 
+(select fileno,max(ledate) ledate 
+from expert32.msgsent2 m 
+where --fileno = ''3394323''
+msg = ''I:AAP''
+group by fileno 
+)b
+on a.fileno = b.fileno
+and a.ledate  = b.ledate
+) M
+ON invoice.FILENO = M.FILENO
+AND M.MSG = ''I:AAP''
+)
+where vendor_id <> ''xxxxx'' and nullif(vendor_id ,'''')is not null
+
+UNION
+
+SELECT 
+Source_System,
+FILE_NBR,
+invoice_nbr,
+coalesce(vendor_id,''xxxxx'')vendor_id,
+service_id,
+Vendor_invoice_nbr,
+origin,
+acctno,
+--rank() over (partition by file_nbr ORDER BY Invoice_Date)AS INVOICE_SEQ_NBR,
+consol_nbr,
+text as charge_cd,
+coalesce(top_line_cost,0)top_line_cost,
+Accessorial,
+Tax,
+Estimated_Total,
+Finalized_Total,
+Total,
+Invoice_Date,
+finalized_Date,
+Finalized_by,
+updated_by,
+Approved_Rejected_date,
+Approved_Rejected_By,
+Disposition,
+Disposition_Reason
+FROM 
+
+(SELECT DISTINCT
+''EE'' as Source_System,
+MAIN.ORIGFILENO AS FILE_NBR,
+MAIN.FILENO as invoice_nbr,
+invitem.acctno as vendor_id,
+''EE'' as service_id,
+'''' as consol_nbr,
+invitem.ref as Vendor_invoice_nbr,
+main.origin,
+main.acctno,
+invitem.text,
+--ROW_NUMBER() over (partition by main.file_nbr ORDER BY invoice.ledate )AS INVOICE_SEQ_NBR,
+--(CAST(CASE WHEN M.MSG = ''I:AAR'' THEN (CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN BCRC2 * E.RATE
+--ELSE BCRC2 END)ELSE 0 END  AS DECIMAL(10,2)))AS "TOTAL_COST",
+--cast(invitem.charge as float),
+--E.RATE,
+sum(CAST((CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) * E.RATE
+ELSE cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) END) AS DECIMAL(10,2)))   over (partition by main.ORIGFILENO,MAIN.FILENO,invitem.acctno ,invitem.ref,main.origin,
+main.acctno,invitem.text
+ ) AS top_line_cost,
+0 as Accessorial,
+0 as Tax,
+sum(CAST((CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) * E.RATE
+ELSE cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) END) AS DECIMAL(10,2))) over (partition by main.ORIGFILENO,MAIN.FILENO,invitem.acctno ,invitem.ref,main.origin,
+main.acctno,invitem.text
+ )  AS Estimated_Total,
+
+sum(CAST(CASE WHEN M.MSG = ''I:AAP'' THEN (CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) * E.RATE
+ELSE cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) END)ELSE 0 END  AS DECIMAL(10,2))) over (partition by main.ORIGFILENO,MAIN.FILENO,invitem.acctno ,invitem.ref,main.origin,
+main.acctno,invitem.text
+ )  AS Finalized_Total,
+
+sum(CAST((CASE WHEN  invoice.LEDATE = E.LEDATE AND invoice.CURRENCY = E.CURRFROM AND E.CURRTO = ''USD'' THEN cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) * E.RATE
+ELSE cast(case when invitem.charge = '''' then ''0'' else invitem.charge end as float) END) AS DECIMAL(10,2))) over (partition by main.ORIGFILENO,MAIN.FILENO,invitem.acctno ,invitem.ref,main.origin,
+main.acctno,invitem.text
+ )  AS Total,
+
+invoice.ledate as Invoice_Date,
+case when m.msg = ''I:AAP'' then m.ledate else null end as finalized_Date,
+case when m.msg = ''I:AAP'' then m.path else null end as Finalized_by,
+case when m.msg = ''I:AAP'' then m.path else null end as updated_by,
+'''' as Approved_Rejected_Date,
+'''' as Approved_Rejected_By,
+'''' as Disposition,
+'''' as Disposition_Reason
+
+
+FROM 
+
+(
+-----------------------------------------------------FIRST-------------------------------------------------------
+SELECT ORIGFILENO,addbill.FILENO,invo.origin,invo.acctno FROM EXPERT32.ADDBILL addbill
+left outer join expert32.invoice invo
+on addbill.fileno = invo.fileno
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+--AND LEDATE >= ''2019-12-30''
+)
+--AND  origfileno = ''87000245''
+and TRIM(acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+
+-----------------------------------------------------SECOND-------------------------------------------------------
+UNION
+
+select fileno,FILENO,invoice.origin,invoice.acctno  from expert32.INVOICE
+where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select origfileno from expert32.ADDBILL) and
+fileno not in (select fileno from expert32.ADDBILL)
+AND  TRIM(acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+--AND LEDATE >= ''2019-12-30''
+--AND FILENO = ''87000245''
+
+-----------------------------------------------------THIRD-------------------------------------------------------
+union
+
+SELECT distinct ORIGFILENO,origfileno ,invo.origin,invo.acctno
+FROM EXPERT32.ADDBILL addbill
+join 
+expert32.invoice invo
+on addbill.origfileno = invo.fileno
+--where origfileno = ''87000245''
+WHERE ORIGFILENO IN (
+select fileno  from expert32.INVOICE where
+fileno not in (select fileno from expert32.AWB) and
+fileno not in (select fileno from expert32.ADDBILL)
+--AND  TRIM(acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+--AND LEDATE >= ''2019-12-30''
+)
+and TRIM(invo.acctno) not in (''100'',''1130'',''2116'',''3556'',''3557'',''3558'',''3559'',''3707'',''3855'',''3939'',''4172'',''4174'',''4197'',''4893'',''5240'',''9454'')
+--and origfileno = ''87000245'' --87000245
+)MAIN
+join expert32.invoice 
+on main.FILENO= invoice.fileno
+LEFT OUTER join 
+expert32.invitem 
+on invoice.fileno = invitem.fileno
+and invitem.payable = -1
+LEFT OUTER JOIN
+expert32.EXCHANGE E
+ON invoice.LEDATE = E.LEDATE
+AND invoice.CURRENCY = E.CURRFROM
+AND E.CURRTO = ''USD''
+LEFT OUTER JOIN (select a.* from expert32.msgsent2 a
+join 
+(select fileno,max(ledate) ledate 
+from expert32.msgsent2 m 
+where --fileno = ''3394323''
+msg = ''I:AAP''
+group by fileno 
+)b
+on a.fileno = b.fileno
+and a.ledate  = b.ledate
+) M
+ON invoice.FILENO = M.FILENO
+AND M.MSG = ''I:AAP''
+)
+WHERE INVOICE_dATE >= ''2017-12-30''
+and coalesce(vendor_id,''xxxxx'') <> ''xxxxx'' and nullif(vendor_id ,'''')is not null
+)z
+')
+TO 's3://dw-datapipeline-prod/Data/Invoices/ee_ap_invoice_payments_data_stage1'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint' 
+Parallel OFF
+ALLOWOVERWRITE

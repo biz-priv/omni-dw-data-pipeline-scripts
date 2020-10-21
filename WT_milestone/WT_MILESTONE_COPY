@@ -1,0 +1,38 @@
+truncate table public.shipment_milestone_Stage;
+
+copy shipment_milestone_stage from 's3://dw-datapipeline-prod/Data/wt_milestone_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+insert into shipment_milestone 
+select 
+source_system,file_nbr ,service_level ,mode ,order_status ,order_status_desc ,
+case when cast(event_Date as date) = '1900-01-01' then null else CONVERT_TIMEZONE ( case 
+when event_timezone = 'CST' THEN 'CDT'
+WHEN event_timezone = 'EST' THEN 'EDT'
+WHEN event_timezone = 'ADT' THEN 'AST'
+WHEN event_timezone = 'HST' THEN 'HST'
+WHEN event_timezone = 'MST' THEN 'MDT'
+WHEN event_timezone = 'PST' THEN 'PDT'
+ELSE 'CST' END ,'UTC', event_Date ) end as event_Date_utc,
+event_date,
+event_seq_nbr ,is_public ,load_create_date ,load_update_date 
+from shipment_milestone_stage 
+where source_system+file_nbr+order_status NOT IN (Select DISTINCT source_system+file_nbr+order_status from shipment_milestone);
+
+update shipment_milestone set 
+event_date_utc = case when cast(s.event_Date as date) = '1900-01-01' then null else CONVERT_TIMEZONE ( case 
+when event_timezone = 'CST' THEN 'CDT'
+WHEN event_timezone = 'EST' THEN 'EDT'
+WHEN event_timezone = 'ADT' THEN 'AST'
+WHEN event_timezone = 'HST' THEN 'HST'
+WHEN event_timezone = 'MST' THEN 'MDT'
+WHEN event_timezone = 'PST' THEN 'PDT'
+ELSE 'CST' END ,'UTC', s.event_Date ) end ,
+event_date = s.event_date ,
+load_update_date= getdate()
+from shipment_milestone_stage s 
+where 
+(
+	shipment_milestone.source_system=s.source_system 
+	and shipment_milestone.file_nbr=s.file_nbr 
+	and shipment_milestone.order_status=s.order_status 
+);

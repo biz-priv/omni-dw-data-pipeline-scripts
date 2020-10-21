@@ -1,0 +1,38 @@
+truncate table public.fourkites_tl_stage;
+
+copy public.fourkites_tl_stage from 's3://dw-datapipeline-prod/Data/fourkites_tl_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+
+insert into public.fourkites_tl select * from public.fourkites_tl_stage 
+where file_nbr+reference_nbr NOT IN (Select DISTINCT file_nbr+reference_nbr from public.fourkites_tl);
+
+
+update public.fourkites_tl set 
+file_date=s.file_date,
+handling_stn=s.handling_stn,
+controlling_stn=s.controlling_stn,
+house_bill_nbr=s.house_bill_nbr,
+reference_nbr = s.reference_nbr,
+shipper_name=s.shipper_name,
+consignee_name=s.consignee_name,
+op_carrier_scac = s.op_carrier_scac,
+bill_to_nbr=s.bill_to_nbr,
+truck_trailer_nbr=s.truck_trailer_nbr,
+city=s.city,
+state=s.state,
+latitude=s.latitude,
+longitude=s.longitude,
+event_Date = s.event_date,
+pod = s.pod,
+pod_date=s.pod_date,
+message_Sent = s.message_sent,
+load_update_date= getdate()
+from public.fourkites_tl_stage s 
+where 
+(
+	fourkites_tl.file_nbr=s.file_nbr 
+	and fourkites_tl.reference_nbr=s.reference_nbr
+	AND (fourkites_tl.latitude <> s.latitude OR fourkites_tl.longitude <> s.longitude
+	OR COALESCE (fourkites_tl.pod_date,'1900-01-01') <> s.pod_date 	
+	)
+);

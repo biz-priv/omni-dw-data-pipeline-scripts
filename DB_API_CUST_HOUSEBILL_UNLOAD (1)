@@ -1,0 +1,15 @@
+UNLOAD(
+'
+SELECT distinct
+file_nbr,
+house_bill_nbr,
+ID
+from 
+api_cust_housebill A
+where message_sent = ''''
+'
+)
+TO 's3://dw-datapipeline-prod/Data/DB_api_cust_housebill_data'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

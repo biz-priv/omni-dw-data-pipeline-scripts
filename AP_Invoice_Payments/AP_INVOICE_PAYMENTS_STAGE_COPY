@@ -1,0 +1,12 @@
+truncate table public.ap_invoice_payments_stage;
+copy ap_invoice_payments_stage 
+from 's3://dw-datapipeline-prod/Data/Invoices/ee_ap_invoice_payments_data_stage1' 
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+COMPUPDATE OFF 
+STATUPDATE OFF;
+
+copy ap_invoice_payments_stage 
+from 's3://dw-datapipeline-prod/Data/Invoices/wt_ap_invoice_payments_data_stage1' 
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+COMPUPDATE OFF 
+STATUPDATE OFF;

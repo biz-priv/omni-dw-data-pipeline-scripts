@@ -1,0 +1,74 @@
+UNLOAD(
+'
+SELECT DISTINCT 
+		SH.HandlingStation AS Station,cast(SH.Housebill as char(50)) as Housebill,V.VendorName as Vendor,
+		(case when SA.RequiresApproval=''X'' then R.InvoiceNo Else SA.InvoiceNo End) as InvoiceNo,
+		(case when SA.RequiresApproval=''X'' then R.InvoiceDate Else SA.InvoiceDate End) as InvoiceDate,
+		SA.Total AS EstimatedCost,(case when SA.RequiresApproval=''X'' then R.FinalizedTotal Else SA.FinalizedTotal End) AS FinalizedAmount,
+		SA.FinalizedBy,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) AS FinalizedDate,
+		(case when SA.RequiresApproval=''X'' then R.DueDate Else SA.DueDate End) AS InvoiceDueDate,
+case when SA.RequiresApproval=''X'' then 
+(case when date_part(dow,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) = 0 then dateadd(day,5,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)  ) 
+when date_part(dow,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) = 6 then dateadd(day,8,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) 
+else dateadd(day,7,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)  ) end) 
+		Else 
+		
+(case when date_part(dow,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)) = 0 then dateadd(day,5,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) 
+when date_part(dow,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)) = 6 then dateadd(day,8,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) 
+else dateadd(day,7,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)) end)
+end 		as AutoApprovalDate,
+
+		SH.FK_ControlCustomerNo as ControllingCustomer,s.description as Salesperson,SH.AcctManager,SA.FK_ServiceId as VendorServiceCode,CTRLBILLTO.CustName as BillToName,
+		translate(regexp_replace((case when SA.RequiresApproval=''X'' OR SA.RequiresApproval=''A'' then (select Convert(varchar,Notes) From dbc.tbl_APARNotes Where FK_OrderNo=SA.FK_OrderNo and FK_SeqNo=SA.SeqNo and ConsolNo=SA.ConsolNo) Else '''' End) , ''\r|\n'', ''''),''|'','''')as DispositionReason,
+		(case when SA.RequiresApproval=''X'' then ''Rejected'' Else case when SA.RequiresApproval=''A'' then ''Accepted'' Else case when SA.RequiresApproval=''T'' or SA.RequiresApproval=''Y'' then ''Pending'' Else '''' End End End) as Disposition,
+		(case when SA.RequiresApproval=''X'' then R.ApprovedRejectedDateTime Else SA.ApprovedRejectedDateTime End) as DispositionDate,(case when SA.RequiresApproval=''X'' then R.ApprovedRejectedBy else SA.ApprovedRejectedBy end) as ApprovedRejectedBy,'''' as SearchCriteria,FK_ModeId,Status,ReadyDateTime,SA.RequiresApproval,
+convert_timezone(''CDT'', sysdate) AS "LOAD CREATE DATE",
+convert_timezone(''CDT'', sysdate) AS "LOAD UPDATE DATE"		
+FROM	dbc.tbl_ShipmentAPAR SA INNER JOIN
+		dbc.tbl_ShipmentHeader SH ON SA.FK_OrderNo = SH.PK_OrderNo INNER JOIN
+		dbc.tbl_Vendors V ON SA.FK_VendorId = V.VendorId LEFT OUTER JOIN
+		dbc.tbl_APARNotes N ON SA.FK_OrderNo = N.FK_OrderNo and SA.SeqNo = N.FK_SeqNo LEFT OUTER JOIN
+		dbc.tbl_RejectedByStation R ON SA.FK_OrderNo = R.FK_OrderNo and SA.SeqNo = R.SeqNo Left Outer Join
+		dbc.tbl_Customers as CTRLBILLTO ON SH.BillNo = CTRLBILLTO.PK_CustNo left outer join 
+		dbc.tbl_salesperson s  on sh.fk_salesperson = s.pk_salespersonid
+WHERE SH.ShipQuote=''S'' AND SA.SeqNo<>9999 AND SA.APARCode=''V'' AND (SA.RequiresApproval IN (''Y'', ''X'', ''T'', ''A''))
+
+
+UNION ALL 
+
+SELECT
+		SA.FK_ConsolStationId AS Station,cast(SA.RefNo as char(50)) as Housebill,V.VendorName as Vendor,
+		(case when SA.RequiresApproval=''X'' then R.InvoiceNo Else SA.InvoiceNo End) as InvoiceNo,
+		(case when SA.RequiresApproval=''X'' then R.InvoiceDate Else SA.InvoiceDate End) as InvoiceDate,
+		SA.Total AS EstimatedCost,(case when SA.RequiresApproval=''X'' then R.FinalizedTotal Else SA.FinalizedTotal End) AS FinalizedAmount,
+		SA.FinalizedBy,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) AS FinalizedDate,
+		(case when SA.RequiresApproval=''X'' then R.DueDate Else SA.DueDate End) AS InvoiceDueDate,
+
+case when SA.RequiresApproval=''X'' then 
+(case when date_part(dow,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) = 0 then dateadd(day,5,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)  ) 
+when date_part(dow,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) = 6 then dateadd(day,8,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) 
+else dateadd(day,7,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)  ) end) 
+		Else 
+	
+(case when date_part(dow,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)) = 0 then dateadd(day,5,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) 
+when date_part(dow,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)) = 6 then dateadd(day,8,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End) ) 
+else dateadd(day,7,(case when SA.RequiresApproval=''X'' then R.FinalizedDate Else SA.FinalizedDate End)) end)
+end 		as AutoApprovalDate,
+		
+		'''' as ControllingCustomer,'''' as Salesperson,'''' as AcctManager,SA.FK_ServiceId as VendorServiceCode,'''' as BillToName,
+		translate(regexp_replace((case when SA.RequiresApproval=''X'' OR SA.RequiresApproval=''A'' then (select max(Convert(varchar,Notes)) From dbc.tbl_APARNotes Where ConsolNo=SA.ConsolNo and FK_SeqNo=SA.SeqNo) Else '''' End) , ''\r|\n'', ''''),''|'','''')as DispositionReason,
+		(case when SA.RequiresApproval=''X'' then ''Rejected'' Else case when SA.RequiresApproval=''A'' then ''Accepted'' Else case when SA.RequiresApproval=''T'' or SA.RequiresApproval=''Y'' then ''Pending'' Else '''' End End End) as Disposition,
+		(case when SA.RequiresApproval=''X'' then R.ApprovedRejectedDateTime Else SA.ApprovedRejectedDateTime End) as DispositionDate,(case when SA.RequiresApproval=''X'' then R.ApprovedRejectedBy else SA.ApprovedRejectedBy end) as ApprovedRejectedBy,'''' as SearchCriteria,
+		'''' as FK_ModeId,Case when SA.Finalize=''Y'' then ''H'' else ''L'' End as Status,SA.ConsolShipDateTime as ReadyDateTime,SA.RequiresApproval,
+convert_timezone(''CDT'', sysdate) AS "LOAD CREATE DATE",
+convert_timezone(''CDT'', sysdate) AS "LOAD UPDATE DATE"
+FROM	dbc.tbl_ShipmentAPAR SA INNER JOIN
+		dbc.tbl_Vendors V ON SA.FK_VendorId = V.VendorId  LEFT OUTER JOIN
+		dbc.tbl_RejectedByStation R ON SA.ConsolNo = R.ConsolNo and SA.SeqNo = R.SeqNo
+WHERE SA.APARCode=''V'' AND SA.SeqNo=9999 AND (SA.RequiresApproval IN (''Y'', ''X'', ''T'', ''A''))
+'
+)
+TO 's3://dw-datapipeline-prod/Data/DM_STATION_COST_APPROVAL_DATA'
+iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint'
+Parallel OFF
+ALLOWOVERWRITE

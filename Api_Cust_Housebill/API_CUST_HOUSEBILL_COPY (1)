@@ -1,0 +1,22 @@
+truncate table api_cust_housebill_Stage;
+
+COPY api_cust_housebill_Stage FROM 's3://dw-datapipeline-prod/Data/api_cust_housebill_data' iam_role 'arn:aws:iam::332281781429:role/dms-access-for-endpoint';
+
+update api_cust_housebill
+set
+message_sent = 'Y'
+from api_cust_housebill_Stage s
+where
+(
+api_cust_housebill.file_nbr = s.file_nbr
+and api_cust_housebill.id  = s.id
+and api_cust_housebill.house_bill_nbr = s.house_bill_nbr
+and api_cust_housebill.source_system = s.source_system
+and api_cust_housebill.cust_nbr = s.cust_nbr
+);
+
+insert into api_cust_housebill select * from api_cust_housebill_Stage
+where source_system+file_nbr+id+cust_nbr+house_bill_nbr not in 
+(
+select distinct source_system+file_nbr+id+cust_nbr+house_bill_nbr from api_cust_housebill
+);
